@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des zones</title>
+</head>
+<body>
+    <h1>Liste des zones</h1>
+    <p><a href="{% url 'zone_creer' %}">Ajouter une zone</a></p>
+    {% if zones %}
+        <ul>
+            {% for zone in zones %}
+                <li>
+                    {{ zone.nom }} — {{ zone.superficie }} m² — {{ zone.services }} — {{ zone.nombre_employes }} employés
+                    <a href="{% url 'zone_modifier' pk=zone.pk %}">Modifier</a>
+                    <a href="{% url 'zone_supprimer' pk=zone.pk %}">Supprimer</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucune zone enregistrée.</p>
+    {% endif %}
+    <p><a href="{% url 'home' %}">← Retour à l'accueil</a></p>
+</body>
+</html>

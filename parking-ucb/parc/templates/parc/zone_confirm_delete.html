@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Supprimer la zone</title>
+</head>
+<body>
+    <h1>Supprimer la zone</h1>
+    <p>Voulez-vous vraiment supprimer {{ zone }} ?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Confirmer la suppression</button>
+    </form>
+    <p><a href="{% url 'zone_liste' %}">← Retour à la liste des zones</a></p>
+</body>
+</html>

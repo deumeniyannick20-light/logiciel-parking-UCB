@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des personnels</title>
+</head>
+<body>
+    <h1>Liste des personnels</h1>
+    <p><a href="{% url 'personnel_creer' %}">Ajouter un personnel</a></p>
+    {% if personnels %}
+        <ul>
+            {% for personnel in personnels %}
+                <li>
+                    {{ personnel.nom }} {{ personnel.prenom }} - {{ personnel.poste }}
+                    <a href="{% url 'personnel_modifier' pk=personnel.pk %}">Modifier</a>
+                    <a href="{% url 'personnel_supprimer' pk=personnel.pk %}">Supprimer</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucun personnel enregistré.</p>
+    {% endif %}
+    <p><a href="{% url 'home' %}">← Retour à l'accueil</a></p>
+</body>
+</html>

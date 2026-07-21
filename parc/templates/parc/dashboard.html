@@ -1,0 +1,48 @@
+{% extends 'mon_app_parking/base.html' %}
+
+{% block title %}Tableau de Bord - Parking{% endblock %}
+
+{% block content %}
+<div class="row">
+  
+  <!-- Bloc 1 : Places occupées -->
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-info">
+      <div class="inner">
+        <h3>15 / 50</h3>
+        <p>Places occupées</p>
+      </div>
+      <div class="icon">
+        <i class="fas fa-car"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bloc 2 : Places libres -->
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-success">
+      <div class="inner">
+        <h3>35</h3>
+        <p>Places libres</p>
+      </div>
+      <div class="icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bloc 3 : Entrées du jour -->
+  <div class="col-lg-3 col-6">
+    <div class="small-box bg-warning">
+      <div class="inner">
+        <h3>28</h3>
+        <p>Entrées aujourd'hui</p>
+      </div>
+      <div class="icon">
+        <i class="fas fa-ticket-alt"></i>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}  

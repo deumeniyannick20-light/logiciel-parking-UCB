@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Supprimer le personnel</title>
+</head>
+<body>
+    <h1>Supprimer le personnel</h1>
+    <p>Êtes-vous sûr de vouloir supprimer {{ personnel }} ?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Confirmer la suppression</button>
+    </form>
+    <p><a href="{% url 'personnel_liste' %}">← Retour à la liste</a></p>
+</body>
+</html>

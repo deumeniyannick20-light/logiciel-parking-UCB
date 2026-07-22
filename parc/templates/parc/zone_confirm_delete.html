@@ -1,16 +1,39 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Supprimer la zone</title>
-</head>
-<body>
-    <h1>Supprimer la zone</h1>
-    <p>Voulez-vous vraiment supprimer {{ zone }} ?</p>
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit">Confirmer la suppression</button>
-    </form>
-    <p><a href="{% url 'zone_liste' %}">← Retour à la liste des zones</a></p>
-</body>
-</html>
+{% extends 'parc/base.html' %}
+
+{% block title %}Supprimer la zone - Parking UCB{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col-sm-6">
+    <h1 class="m-0">Supprimer la zone</h1>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card card-danger">
+      <div class="card-header">
+        <h3 class="card-title">
+          <i class="fas fa-exclamation-triangle mr-1"></i> Confirmation de suppression
+        </h3>
+      </div>
+      
+      <div class="card-body">
+        <p class="lead">Voulez-vous vraiment supprimer {{ zone }} ?</p>
+      </div>
+
+      <div class="card-footer">
+        <form method="post" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash mr-1"></i> Confirmer la suppression
+          </button>
+        </form>
+        <a href="{% url 'zone_liste' %}" class="btn btn-secondary ml-2">
+          ← Retour à la liste des zones
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

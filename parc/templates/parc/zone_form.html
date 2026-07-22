@@ -1,16 +1,36 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ titre }}</title>
-</head>
-<body>
-    <h1>{{ titre }}</h1>
-    <form method="post">
+{% extends 'parc/base.html' %}
+
+{% block title %}{{ titre }} - Parking UCB{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col-sm-6">
+    <h1 class="m-0">{{ titre }}</h1>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card card-success">
+      <div class="card-header">
+        <h3 class="card-title">{{ titre }}</h3>
+      </div>
+      
+      <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Enregistrer</button>
-    </form>
-    <p><a href="{% url 'zone_liste' %}">← Retour à la liste des zones</a></p>
-</body>
-</html>
+        <div class="card-body">
+          {{ form.as_p }}
+        </div>
+        <div class="card-footer">
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-save mr-1"></i> Enregistrer
+          </button>
+          <a href="{% url 'zone_liste' %}" class="btn btn-secondary ml-2">
+            ← Retour à la liste des zones
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

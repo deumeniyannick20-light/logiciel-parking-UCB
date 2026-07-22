@@ -1,26 +1,36 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>{{ titre }}</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 520px; margin: 40px auto; }
-    label { display: block; margin-top: 12px; font-weight: bold; }
-    input[type="text"], input[type="checkbox"] { margin-top: 4px; }
-    .form-control { width: 100%; padding: 8px; box-sizing: border-box; }
-    button { margin-top: 16px; padding: 10px 16px; cursor: pointer; }
-    .errors { color: #b00020; }
-  </style>
-</head>
-<body>
-  <h1>{{ titre }}</h1>
+{% extends 'parc/base.html' %}
 
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Enregistrer</button>
-  </form>
+{% block title %}{{ titre }} - Parking UCB{% endblock %}
 
-  <p><a href="{% url 'vehicule_liste' %}">← Retour à la liste</a></p>
-</body>
-</html>
+{% block content %}
+<div class="row mb-3">
+  <div class="col-sm-6">
+    <h1 class="m-0">{{ titre }}</h1>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card card-primary">
+      <div class="card-header">
+        <h3 class="card-title">{{ titre }}</h3>
+      </div>
+      
+      <form method="post">
+        {% csrf_token %}
+        <div class="card-body">
+          {{ form.as_p }}
+        </div>
+        <div class="card-footer">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save mr-1"></i> Enregistrer
+          </button>
+          <a href="{% url 'vehicule_liste' %}" class="btn btn-secondary ml-2">
+            ← Retour à la liste
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

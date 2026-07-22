@@ -1,25 +1,62 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Liste des personnels</title>
-</head>
-<body>
-    <h1>Liste des personnels</h1>
-    <p><a href="{% url 'personnel_creer' %}">Ajouter un personnel</a></p>
+{% extends 'parc/base.html' %}
+
+{% block title %}Liste du personnel - Parking UCB{% endblock %}
+
+{% block content %}
+<div class="row mb-3 align-items-center">
+  <div class="col-sm-6">
+    <h1 class="m-0">Liste des personnels</h1>
+  </div>
+  <div class="col-sm-6 text-right">
+    <a href="{% url 'personnel_creer' %}" class="btn btn-success">
+      <i class="fas fa-plus-circle mr-1"></i> Ajouter un personnel
+    </a>
+  </div>
+</div>
+
+<div class="card card-primary card-outline">
+  <div class="card-body p-0">
     {% if personnels %}
-        <ul>
-            {% for personnel in personnels %}
-                <li>
-                    {{ personnel.nom }} {{ personnel.prenom }} - {{ personnel.poste }}
-                    <a href="{% url 'personnel_modifier' pk=personnel.pk %}">Modifier</a>
-                    <a href="{% url 'personnel_supprimer' pk=personnel.pk %}">Supprimer</a>
-                </li>
-            {% endfor %}
-        </ul>
+      <table class="table table-striped table-hover m-0">
+        <thead class="thead-light">
+          <tr>
+            <th>Nom & Prénom</th>
+            <th>Poste</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for personnel in personnels %}
+            <tr>
+              <td class="align-middle font-weight-bold">
+                {{ personnel.nom }} {{ personnel.prenom }}
+              </td>
+              <td class="align-middle">
+                {{ personnel.poste }}
+              </td>
+              <td class="text-right align-middle">
+                <a href="{% url 'personnel_modifier' pk=personnel.pk %}" class="btn btn-sm btn-warning mr-1">
+                  <i class="fas fa-edit"></i> Modifier
+                </a>
+                <a href="{% url 'personnel_supprimer' pk=personnel.pk %}" class="btn btn-sm btn-danger">
+                  <i class="fas fa-trash"></i> Supprimer
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     {% else %}
-        <p>Aucun personnel enregistré.</p>
+      <div class="p-4 text-center text-muted">
+        <i class="fas fa-info-circle fa-2x mb-2"></i>
+        <p class="mb-0">Aucun personnel enregistré pour le moment.</p>
+      </div>
     {% endif %}
-    <p><a href="{% url 'home' %}">← Retour à l'accueil</a></p>
-</body>
-</html>
+  </div>
+  <div class="card-footer">
+    <a href="{% url 'home' %}" class="btn btn-default">
+      <i class="fas fa-arrow-left mr-1"></i> Retour à l'accueil
+    </a>
+  </div>
+</div>
+{% endblock %}

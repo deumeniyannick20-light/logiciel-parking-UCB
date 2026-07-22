@@ -1,11 +1,11 @@
 {% extends 'parc/base.html' %}
 
-{% block title %}Supprimer le véhicule - Parking UCB{% endblock %}
+{% block title %}Supprimer le poste - Parking UCB{% endblock %}
 
 {% block content %}
 <div class="row mb-3">
   <div class="col-sm-6">
-    <h1 class="m-0">Supprimer le véhicule</h1>
+    <h1 class="m-0">Supprimer le poste</h1>
   </div>
 </div>
 
@@ -17,9 +17,9 @@
           <i class="fas fa-exclamation-triangle mr-1"></i> Confirmation de suppression
         </h3>
       </div>
-      
+
       <div class="card-body">
-        <p class="lead">Êtes-vous sûr de vouloir supprimer le véhicule "{{ vehicule }}" ?</p>
+        <p class="lead">Êtes-vous sûr de vouloir supprimer le poste "{{ poste }}" ?</p>
       </div>
 
       <div class="card-footer">
@@ -29,7 +29,7 @@
             <i class="fas fa-trash mr-1"></i> Confirmer la suppression
           </button>
         </form>
-        <a href="{% url 'vehicule_liste' %}" class="btn btn-secondary ml-2">
+        <a href="{% url 'poste_liste' %}" class="btn btn-secondary ml-2">
           ← Retour à la liste
         </a>
       </div>

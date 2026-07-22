@@ -1,4 +1,107 @@
 from django.db import models
+from django.conf import settings
+
+
+class Poste(models.Model):
+    nom = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Poste"
+        verbose_name_plural = "Postes"
+        ordering = ["nom"]
+
+    def __str__(self):
+        return self.nom
+
+
+class Parking(models.Model):
+    nom = models.CharField(max_length=100, unique=True)
+    adresse = models.CharField(max_length=255, blank=True)
+    capacite_total = models.PositiveIntegerField(default=0)
+    actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Parking"
+        verbose_name_plural = "Parkings"
+        ordering = ["nom"]
+
+    def __str__(self):
+        return self.nom
+
+
+class PlaceParking(models.Model):
+    parking = models.ForeignKey(Parking, on_delete=models.CASCADE, related_name="places")
+    numero = models.CharField(max_length=20)
+    statut = models.CharField(
+        max_length=20,
+        choices=[("libre", "Libre"), ("occupee", "Occupée")],
+        default="libre"
+    )
+    type_place = models.CharField(max_length=50, blank=True)
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Place de parking"
+        verbose_name_plural = "Places de parking"
+        unique_together = ("parking", "numero")
+        ordering = ["parking__nom", "numero"]
+
+    def __str__(self):
+        return f"{self.parking.nom} - {self.numero}"
+
+
+class Utilisateur(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profil_utilisateur"
+    )
+    poste = models.ForeignKey(
+        Poste,
+        on_delete=models.PROTECT,
+        related_name="utilisateurs",
+        null=True,
+        blank=True
+    )
+    telephone = models.CharField(max_length=20, blank=True)
+    actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Utilisateur"
+        verbose_name_plural = "Utilisateurs"
+        ordering = ["user__username"]
+
+    def __str__(self):
+        return self.user.get_full_name() or self.user.username
+
+
+class Occupation(models.Model):
+    place_parking = models.ForeignKey(
+        PlaceParking,
+        on_delete=models.CASCADE,
+        related_name="occupations"
+    )
+    utilisateur = models.ForeignKey(
+        Utilisateur,
+        on_delete=models.CASCADE,
+        related_name="occupations"
+    )
+    date_entree = models.DateTimeField(auto_now_add=True)
+    date_sortie = models.DateTimeField(null=True, blank=True)
+    est_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Occupation"
+        verbose_name_plural = "Occupations"
+        ordering = ["-date_entree"]
+
+    def __str__(self):
+        return f"{self.place_parking} -> {self.utilisateur}"
 
 
 class Vehicule(models.Model):

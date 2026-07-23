@@ -166,7 +166,7 @@ def zone_supprimer(request, pk):
 @login_required
 def poste_liste(request):
     postes = Poste.objects.all().order_by("nom")
-    return render(request, "parc/crud_list.html", {
+    return render(request, "parc/poste_list.html", {
         "items": postes,
         "title": "Liste des postes",
         "create_url": "poste_creer",
@@ -186,7 +186,7 @@ def poste_creer(request):
     else:
         form = PosteForm()
 
-    return render(request, "parc/crud_form.html", {
+    return render(request, "parc/poste_form.html", {
         "form": form,
         "title": "Ajouter un poste",
         "list_url": "poste_liste",
@@ -205,7 +205,7 @@ def poste_modifier(request, pk):
     else:
         form = PosteForm(instance=poste)
 
-    return render(request, "parc/crud_form.html", {
+    return render(request, "parc/poste_form.html", {
         "form": form,
         "title": "Modifier un poste",
         "list_url": "poste_liste",
@@ -220,7 +220,7 @@ def poste_supprimer(request, pk):
         messages.success(request, "Poste supprimé avec succès.")
         return redirect("poste_liste")
 
-    return render(request, "parc/crud_confirm_delete.html", {
+    return render(request, "parc/poste_confirm_delete.html", {
         "item": poste,
         "title": "Supprimer un poste",
         "list_url": "poste_liste",
@@ -231,7 +231,7 @@ def poste_supprimer(request, pk):
 @login_required
 def parking_liste(request):
     parkings = Parking.objects.all().order_by("nom")
-    return render(request, "parc/crud_list.html", {
+    return render(request, "parc/parking_list.html", {
         "items": parkings,
         "title": "Liste des parkings",
         "create_url": "parking_creer",
@@ -251,7 +251,7 @@ def parking_creer(request):
     else:
         form = ParkingForm()
 
-    return render(request, "parc/crud_form.html", {
+    return render(request, "parc/parking_form.html", {
         "form": form,
         "title": "Ajouter un parking",
         "list_url": "parking_liste",
@@ -270,7 +270,7 @@ def parking_modifier(request, pk):
     else:
         form = ParkingForm(instance=parking)
 
-    return render(request, "parc/crud_form.html", {
+    return render(request, "parc/parking_form.html", {
         "form": form,
         "title": "Modifier un parking",
         "list_url": "parking_liste",
@@ -285,7 +285,7 @@ def parking_supprimer(request, pk):
         messages.success(request, "Parking supprimé avec succès.")
         return redirect("parking_liste")
 
-    return render(request, "parc/crud_confirm_delete.html", {
+    return render(request, "parc/parking_confirm_delete.html", {
         "item": parking,
         "title": "Supprimer un parking",
         "list_url": "parking_liste",
@@ -296,7 +296,7 @@ def parking_supprimer(request, pk):
 @login_required
 def placeparking_liste(request):
     places = PlaceParking.objects.all().order_by("parking__nom", "numero")
-    return render(request, "parc/crud_list.html", {
+    return render(request, "parc/placeparking_list.html", {
         "items": places,
         "title": "Liste des places de parking",
         "create_url": "placeparking_creer",
@@ -316,7 +316,7 @@ def placeparking_creer(request):
     else:
         form = PlaceParkingForm()
 
-    return render(request, "parc/crud_form.html", {
+    return render(request, "parc/placeparking_form.html", {
         "form": form,
         "title": "Ajouter une place de parking",
         "list_url": "placeparking_liste",
@@ -335,7 +335,7 @@ def placeparking_modifier(request, pk):
     else:
         form = PlaceParkingForm(instance=place)
 
-    return render(request, "parc/crud_form.html", {
+    return render(request, "parc/placeparking_form.html", {
         "form": form,
         "title": "Modifier une place de parking",
         "list_url": "placeparking_liste",
@@ -350,7 +350,7 @@ def placeparking_supprimer(request, pk):
         messages.success(request, "Place de parking supprimée avec succès.")
         return redirect("placeparking_liste")
 
-    return render(request, "parc/crud_confirm_delete.html", {
+    return render(request, "parc/placeparking_confirm_delete.html", {
         "item": place,
         "title": "Supprimer une place de parking",
         "list_url": "placeparking_liste",
@@ -361,7 +361,7 @@ def placeparking_supprimer(request, pk):
 @login_required
 def utilisateur_liste(request):
     utilisateurs = Utilisateur.objects.all().order_by("user__username")
-    return render(request, "parc/crud_list.html", {
+    return render(request, "parc/utilisateur_list.html", {
         "items": utilisateurs,
         "title": "Liste des utilisateurs",
         "create_url": "utilisateur_creer",
@@ -381,7 +381,7 @@ def utilisateur_creer(request):
     else:
         form = UtilisateurForm()
 
-    return render(request, "parc/crud_form.html", {
+    return render(request, "parc/utilisateur_form.html", {
         "form": form,
         "title": "Ajouter un utilisateur",
         "list_url": "utilisateur_liste",
@@ -400,7 +400,7 @@ def utilisateur_modifier(request, pk):
     else:
         form = UtilisateurForm(instance=utilisateur)
 
-    return render(request, "parc/crud_form.html", {
+    return render(request, "parc/utilisateur_form.html", {
         "form": form,
         "title": "Modifier un utilisateur",
         "list_url": "utilisateur_liste",
@@ -415,7 +415,7 @@ def utilisateur_supprimer(request, pk):
         messages.success(request, "Utilisateur supprimé avec succès.")
         return redirect("utilisateur_liste")
 
-    return render(request, "parc/crud_confirm_delete.html", {
+    return render(request, "parc/utilisateur_confirm_delete.html", {
         "item": utilisateur,
         "title": "Supprimer un utilisateur",
         "list_url": "utilisateur_liste",
@@ -426,7 +426,7 @@ def utilisateur_supprimer(request, pk):
 @login_required
 def occupation_liste(request):
     occupations = Occupation.objects.all().order_by("-date_entree")
-    return render(request, "parc/crud_list.html", {
+    return render(request, "parc/occupation_list.html", {
         "items": occupations,
         "title": "Liste des occupations",
         "create_url": "occupation_creer",
@@ -446,7 +446,7 @@ def occupation_creer(request):
     else:
         form = OccupationForm()
 
-    return render(request, "parc/crud_form.html", {
+    return render(request, "parc/occupation_form.html", {
         "form": form,
         "title": "Ajouter une occupation",
         "list_url": "occupation_liste",
@@ -465,7 +465,7 @@ def occupation_modifier(request, pk):
     else:
         form = OccupationForm(instance=occupation)
 
-    return render(request, "parc/crud_form.html", {
+    return render(request, "parc/occupation_form.html", {
         "form": form,
         "title": "Modifier une occupation",
         "list_url": "occupation_liste",
@@ -480,7 +480,7 @@ def occupation_supprimer(request, pk):
         messages.success(request, "Occupation supprimée avec succès.")
         return redirect("occupation_liste")
 
-    return render(request, "parc/crud_confirm_delete.html", {
+    return render(request, "parc/occupation_confirm_delete.html", {
         "item": occupation,
         "title": "Supprimer une occupation",
         "list_url": "occupation_liste",

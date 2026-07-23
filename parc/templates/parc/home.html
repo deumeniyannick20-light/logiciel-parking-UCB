@@ -55,4 +55,77 @@
     </div>
   </div>
 </div>
+
+<div class="row mt-4">
+  <!-- Carte : Gestion des Postes -->
+  <div class="col-md-4 mt-4">
+    <div class="card card-outline">
+      <div class="card-body text-center">
+        <i class="fas fa-id-badge fa-3x text-secondary mb-3"></i>
+        <h5 class="card-title w-100 font-weight-bold mb-2">Postes</h5>
+        <p class="card-text text-muted">Gérer les postes du site.</p>
+        <a href="{% url 'poste_liste' %}" class="btn btn-secondary btn-block">
+          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Carte : Gestion des Parkings -->
+  <div class="col-md-4 mt-4">
+    <div class="card card-outline">
+      <div class="card-body text-center">
+        <i class="fas fa-warehouse fa-3x text-primary mb-3"></i>
+        <h5 class="card-title w-100 font-weight-bold mb-2">Parkings</h5>
+        <p class="card-text text-muted">Gérer les parkings et informations associées.</p>
+        <a href="{% url 'parking_liste' %}" class="btn btn-primary btn-block">
+          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Carte : Gestion des Places -->
+  <div class="col-md-4 mt-4">
+    <div class="card card-outline">
+      <div class="card-body text-center">
+        <i class="fas fa-square-parking fa-3x text-success mb-3"></i>
+        <h5 class="card-title w-100 font-weight-bold mb-2">Places</h5>
+        <p class="card-text text-muted">Gérer les places de parking.</p>
+        <a href="{% url 'placeparking_liste' %}" class="btn btn-success btn-block">
+          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row mt-4">
+  <!-- Carte : Gestion des Utilisateurs -->
+  <div class="col-md-4 mt-4">
+    <div class="card card-outline">
+      <div class="card-body text-center">
+        <i class="fas fa-user-shield fa-3x text-info mb-3"></i>
+        <h5 class="card-title w-100 font-weight-bold mb-2">Utilisateurs</h5>
+        <p class="card-text text-muted">Gérer les comptes utilisateurs.</p>
+        <a href="{% url 'utilisateur_liste' %}" class="btn btn-info btn-block text-white">
+          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Carte : Gestion des Occupations -->
+  <div class="col-md-4 mt-4">
+    <div class="card card-outline">
+      <div class="card-body text-center">
+        <i class="fas fa-clock fa-3x text-danger mb-3"></i>
+        <h5 class="card-title w-100 font-weight-bold mb-2">Occupations</h5>
+        <p class="card-text text-muted">Gérer les occupations des places.</p>
+        <a href="{% url 'occupation_liste' %}" class="btn btn-danger btn-block">
+          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

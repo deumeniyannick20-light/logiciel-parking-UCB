@@ -1,38 +1,44 @@
 {% extends 'parc/base.html' %}
 
-{% block title %}Liste des postes - Parking UCB{% endblock %}
+{% block title %}Liste des utilisateurs - Parking UCB{% endblock %}
 
 {% block content %}
 <div class="row mb-3 align-items-center">
   <div class="col-sm-6">
-    <h1 class="m-0">Liste des postes</h1>
+    <h1 class="m-0">Liste des utilisateurs</h1>
   </div>
   <div class="col-sm-6 text-right">
-    <a href="{% url 'poste_creer' %}" class="btn btn-success">
-      <i class="fas fa-plus-circle mr-1"></i> Ajouter un poste
+    <a href="{% url 'utilisateur_creer' %}" class="btn btn-success">
+      <i class="fas fa-plus-circle mr-1"></i> Ajouter un utilisateur
     </a>
   </div>
 </div>
 
 <div class="card card-primary card-outline">
   <div class="card-body p-0">
-    {% if postes %}
+    {% if utilisateurs %}
       <table class="table table-striped table-hover m-0">
         <thead class="thead-light">
           <tr>
-            <th>Nom</th>
+            <th>Nom & Prénom</th>
+            <th>Poste</th>
             <th class="text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {% for poste in postes %}
+          {% for utilisateur in utilisateurs %}
             <tr>
-              <td class="align-middle font-weight-bold">{{ poste.nom }}</td>
+              <td class="align-middle font-weight-bold">
+                {{ utilisateur.nom }} {{ utilisateur.prenom }}
+              </td>
+              <td class="align-middle">
+                {{ utlisateur.poste }}
+              </td>
               <td class="text-right align-middle">
-                <a href="{% url 'poste_modifier' pk=poste.pk %}" class="btn btn-sm btn-warning mr-1">
+                <a href="{% url 'utilisateur_modifier' pk=utilisateur.pk %}" class="btn btn-sm btn-warning mr-1">
                   <i class="fas fa-edit"></i> Modifier
                 </a>
-                <a href="{% url 'poste_supprimer' pk=poste.pk %}" class="btn btn-sm btn-danger">
+                <a href="{% url 'utilisateur_supprimer' pk=utilisateur.pk %}" class="btn btn-sm btn-danger">
                   <i class="fas fa-trash"></i> Supprimer
                 </a>
               </td>
@@ -43,17 +49,11 @@
     {% else %}
       <div class="p-4 text-center text-muted">
         <i class="fas fa-info-circle fa-2x mb-2"></i>
-        <p class="mb-0">Aucun poste enregistré.</p>
+        <p class="mb-0">Aucun utilisateur enregistré pour le moment.</p>
       </div>
     {% endif %}
   </div>
   <div class="card-footer">
-    <a href="{% url 'home' %}" class="btn btn-default">
-      <i class="fas fa-arrow-left mr-1"></i> Retour à l'accueil
-    </a>
-  </div>
-</div>
-<div class="card-footer">
     <a href="{% url 'home' %}" class="btn btn-default">
       <i class="fas fa-arrow-left mr-1"></i> Retour à l'accueil
     </a>

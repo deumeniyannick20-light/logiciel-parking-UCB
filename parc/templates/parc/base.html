@@ -31,10 +31,13 @@
 
   <!-- Menu de gauche (Sidebar AdminLTE) -->
   <aside class="main-sidebar sidebar-dark-primary elevation-4">
-    <a href="{% url 'home' %}" class="brand-link">
-      <i class="fas fa-parking fa-2x ml-3 mr-2"></i>
-      <span class="brand-text font-weight-bold" style="font-family: 'Times New Roman', Times, serif;">Parking Management</span>
-    </a>
+    <a href="{% url 'home' %}" class="brand-link d-flex align-items-center">
+    <i class="fas fa-parking fa-2x ml-3 mr-2"></i>
+    <div class="brand-text font-weight-bold" style="font-family: 'Times New Roman', Times, serif; line-height: 1.2;">
+        <div>Parking</div>
+        <div>Management</div>
+    </div>
+</a>
 
     <div class="sidebar">
       <nav class="mt-2">
@@ -42,7 +45,7 @@
           
           <li class="nav-item">
             <a href="{% url 'home' %}" class="nav-link">
-              <i class="nav-icon fas fa-tachometer-alt"></i>
+             <i class="nav-icon fas fa-home"></i>
               <p>Accueil</p>
             </a>
           </li>

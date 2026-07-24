@@ -2,6 +2,23 @@ from django.db import models
 from django.conf import settings
 
 
+class Zone(models.Model):
+    nom = models.CharField(max_length=100, unique=True)
+    superficie = models.DecimalField(max_digits=8, decimal_places=2, help_text="Superficie en m²")
+    services = models.CharField(max_length=200, blank=True)
+    nombre_employes = models.PositiveIntegerField(default=0)
+    actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Zone"
+        verbose_name_plural = "Zones"
+        ordering = ["nom"]
+
+    def __str__(self):
+        return f"{self.nom} ({self.superficie} m²)"
+
+
 class Poste(models.Model):
     nom = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
@@ -24,6 +41,9 @@ class Parking(models.Model):
     actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
 
+    # 🔗 RELATION : Un parking appartient à une Zone
+    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name="parkings", null=True, blank=True)
+
     class Meta:
         verbose_name = "Parking"
         verbose_name_plural = "Parkings"
@@ -44,6 +64,9 @@ class PlaceParking(models.Model):
     type_place = models.CharField(max_length=50, blank=True)
     actif = models.BooleanField(default=True)
 
+    # 🔗 RELATION : Une place peut être réservée/affectée à un Poste
+    poste_affecte = models.ForeignKey(Poste, on_delete=models.SET_NULL, null=True, blank=True, related_name="places_affectees")
+
     class Meta:
         verbose_name = "Place de parking"
         verbose_name_plural = "Places de parking"
@@ -51,7 +74,45 @@ class PlaceParking(models.Model):
         ordering = ["parking__nom", "numero"]
 
     def __str__(self):
-        return f"{self.parking.nom} - {self.numero}"
+        return f"{self.parking.nom} - Place N°{self.numero}"
+
+
+class Personnel(models.Model):
+    nom = models.CharField(max_length=50)
+    prenom = models.CharField(max_length=50)
+    # On utilise poste_obj au lieu de poste pour éviter le bug de renommage MySQL
+    poste_obj = models.ForeignKey(Poste, on_delete=models.SET_NULL, null=True, blank=True, related_name="personnels")
+    email = models.EmailField(blank=True)
+    actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Personnel"
+        verbose_name_plural = "Personnel"
+        ordering = ["nom", "prenom"]
+
+    def __str__(self):
+        return f"{self.nom} {self.prenom}"
+
+
+class Vehicule(models.Model):
+    immatriculation = models.CharField(max_length=20, unique=True)
+    marque = models.CharField(max_length=50)
+    modele = models.CharField(max_length=50)
+    couleur = models.CharField(max_length=30, blank=True)
+    actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    # 🔗 RELATION : Un véhicule appartient à un membre du Personnel
+    personnel = models.ForeignKey(Personnel, on_delete=models.CASCADE, related_name="vehicules", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Véhicule"
+        verbose_name_plural = "Véhicules"
+        ordering = ["immatriculation"]
+
+    def __str__(self):
+        return f"{self.immatriculation} - {self.marque} {self.modele}"
 
 
 class Utilisateur(models.Model):
@@ -89,7 +150,17 @@ class Occupation(models.Model):
     utilisateur = models.ForeignKey(
         Utilisateur,
         on_delete=models.CASCADE,
-        related_name="occupations"
+        related_name="occupations",
+        null=True,
+        blank=True
+    )
+    # 🔗 RELATION : Liaison directe au véhicule garé
+    vehicule = models.ForeignKey(
+        Vehicule,
+        on_delete=models.CASCADE,
+        related_name="occupations",
+        null=True,
+        blank=True
     )
     date_entree = models.DateTimeField(auto_now_add=True)
     date_sortie = models.DateTimeField(null=True, blank=True)
@@ -101,55 +172,4 @@ class Occupation(models.Model):
         ordering = ["-date_entree"]
 
     def __str__(self):
-        return f"{self.place_parking} -> {self.utilisateur}"
-
-
-class Vehicule(models.Model):
-    immatriculation = models.CharField(max_length=20, unique=True)
-    marque = models.CharField(max_length=50)
-    modele = models.CharField(max_length=50)
-    couleur = models.CharField(max_length=30, blank=True)
-    actif = models.BooleanField(default=True)
-    date_creation = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Véhicule"
-        verbose_name_plural = "Véhicules"
-        ordering = ["immatriculation"]
-
-    def __str__(self):
-        return f"{self.immatriculation} - {self.marque} {self.modele}"
-
-
-class Personnel(models.Model):
-    nom = models.CharField(max_length=50)
-    prenom = models.CharField(max_length=50)
-    poste = models.CharField(max_length=100)
-    email = models.EmailField(blank=True)
-    actif = models.BooleanField(default=True)
-    date_creation = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Personnel"
-        verbose_name_plural = "Personnel"
-        ordering = ["nom", "prenom"]
-
-    def __str__(self):
-        return f"{self.nom} {self.prenom} ({self.poste})"
-
-
-class Zone(models.Model):
-    nom = models.CharField(max_length=100, unique=True)
-    superficie = models.DecimalField(max_digits=8, decimal_places=2, help_text="Superficie en m²")
-    services = models.CharField(max_length=200, blank=True)
-    nombre_employes = models.PositiveIntegerField(default=0)
-    actif = models.BooleanField(default=True)
-    date_creation = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Zone"
-        verbose_name_plural = "Zones"
-        ordering = ["nom"]
-
-    def __str__(self):
-        return f"{self.nom} ({self.superficie} m²)"
+        return f"{self.place_parking} -> {self.vehicule or self.utilisateur}"

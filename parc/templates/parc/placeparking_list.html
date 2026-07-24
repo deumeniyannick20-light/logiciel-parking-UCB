@@ -1,60 +1,64 @@
 {% extends 'parc/base.html' %}
 
-{% block title %}Liste des utilisateurs - Parking UCB{% endblock %}
+{% block title %}Liste des places - Parking UCB{% endblock %}
 
 {% block content %}
 <div class="row mb-3 align-items-center">
   <div class="col-sm-6">
-    <h1 class="m-0">Liste des utilisateurs</h1>
+    <h1 class="m-0">Liste des places de parking</h1>
   </div>
   <div class="col-sm-6 text-right">
-    <a href="{% url 'utilisateur_creer' %}" class="btn btn-success">
-      <i class="fas fa-plus-circle mr-1"></i> Ajouter un utilisateur
+    <a href="{% url 'placeparking_creer' %}" class="btn btn-success">
+      <i class="fas fa-plus-circle mr-1"></i> Ajouter une place
     </a>
   </div>
 </div>
 
-<div class="card card-info card-outline">
+<div class="card card-success card-outline">
   <div class="card-body p-0">
-    {% if utilisateurs %}
+    {% if places %}
       <table class="table table-striped table-hover m-0">
         <thead class="thead-light">
           <tr>
-            <th>Nom & Prénom</th>
-            <th>Compte / Identifiant</th>
-            <th>Poste</th>
-            <th>Téléphone</th>
+            <th>Parking</th>
+            <th>Numéro</th>
+            <th>Type</th>
+            <th>Occupation</th>
             <th>Statut</th>
             <th class="text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {% for u in utilisateurs %}
+          {% for place in places %}
             <tr>
               <td class="align-middle font-weight-bold">
-                {{ u.user.get_full_name|default:u.user.username }}
+                {{ place.parking.nom }}
               </td>
               <td class="align-middle">
-                <i class="fas fa-user mr-1 text-muted"></i> {{ u.user.username }}
+                N° {{ place.numero }}
               </td>
               <td class="align-middle">
-                {{ u.poste.nom|default:"Non défini" }}
+                {{ place.type_place|default:"Standard" }}
               </td>
               <td class="align-middle">
-                {{ u.telephone|default:"--" }}
+                {% if place.statut == 'libre' %}
+                  <span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Libre</span>
+                {% else %}
+                  <span class="badge badge-danger"><i class="fas fa-car mr-1"></i>Occupée</span>
+                {% endif %}
               </td>
               <td class="align-middle">
-                {% if u.actif %}
+                {% if place.actif %}
                   <span class="badge badge-success">Actif</span>
                 {% else %}
                   <span class="badge badge-secondary">Inactif</span>
                 {% endif %}
               </td>
               <td class="text-right align-middle">
-                <a href="{% url 'utilisateur_modifier' pk=u.pk %}" class="btn btn-sm btn-warning mr-1">
+                <a href="{% url 'placeparking_modifier' pk=place.pk %}" class="btn btn-sm btn-warning mr-1">
                   <i class="fas fa-edit"></i> Modifier
                 </a>
-                <a href="{% url 'utilisateur_supprimer' pk=u.pk %}" class="btn btn-sm btn-danger">
+                <a href="{% url 'placeparking_supprimer' pk=place.pk %}" class="btn btn-sm btn-danger">
                   <i class="fas fa-trash"></i> Supprimer
                 </a>
               </td>
@@ -65,7 +69,7 @@
     {% else %}
       <div class="p-4 text-center text-muted">
         <i class="fas fa-info-circle fa-2x mb-2"></i>
-        <p class="mb-0">Aucun utilisateur enregistré pour le moment.</p>
+        <p class="mb-0">Aucune place enregistrée pour le moment.</p>
       </div>
     {% endif %}
   </div>

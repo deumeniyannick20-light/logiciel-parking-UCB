@@ -166,13 +166,8 @@ def zone_supprimer(request, pk):
 @login_required
 def poste_liste(request):
     postes = Poste.objects.all().order_by("nom")
-    return render(request, "parc/poste_list.html", {
-        "items": postes,
-        "title": "Liste des postes",
-        "create_url": "poste_creer",
-        "empty_message": "Aucun poste enregistré.",
-        "back_url": "home",
-    })
+    return render(request, "parc/poste_list.html", {"postes": postes})
+      
 
 
 @login_required
@@ -186,11 +181,7 @@ def poste_creer(request):
     else:
         form = PosteForm()
 
-    return render(request, "parc/poste_form.html", {
-        "form": form,
-        "title": "Ajouter un poste",
-        "list_url": "poste_liste",
-    })
+    return render(request, "parc/poste_form.html", {"form": form, "title": "Ajouter un poste", "list_url": "poste_liste",})
 
 
 @login_required
@@ -231,13 +222,7 @@ def poste_supprimer(request, pk):
 @login_required
 def parking_liste(request):
     parkings = Parking.objects.all().order_by("nom")
-    return render(request, "parc/parking_list.html", {
-        "items": parkings,
-        "title": "Liste des parkings",
-        "create_url": "parking_creer",
-        "empty_message": "Aucun parking enregistré.",
-        "back_url": "home",
-    })
+    return render(request, "parc/parking_list.html", {"parkings": parkings})
 
 
 @login_required
@@ -296,13 +281,7 @@ def parking_supprimer(request, pk):
 @login_required
 def placeparking_liste(request):
     places = PlaceParking.objects.all().order_by("parking__nom", "numero")
-    return render(request, "parc/placeparking_list.html", {
-        "items": places,
-        "title": "Liste des places de parking",
-        "create_url": "placeparking_creer",
-        "empty_message": "Aucune place de parking enregistrée.",
-        "back_url": "home",
-    })
+    return render(request, "parc/placeparking_list.html", {"places": places})
 
 
 @login_required
@@ -361,13 +340,7 @@ def placeparking_supprimer(request, pk):
 @login_required
 def utilisateur_liste(request):
     utilisateurs = Utilisateur.objects.all().order_by("user__username")
-    return render(request, "parc/utilisateur_list.html", {
-        "items": utilisateurs,
-        "title": "Liste des utilisateurs",
-        "create_url": "utilisateur_creer",
-        "empty_message": "Aucun utilisateur enregistré.",
-        "back_url": "home",
-    })
+    return render(request, "parc/utilisateur_list.html", {"utilisateurs": utilisateurs})
 
 
 @login_required
@@ -423,15 +396,12 @@ def utilisateur_supprimer(request, pk):
 
 
 # -------------------- OCCUPATIONS --------------------
+# Dans views.py
 @login_required
 def occupation_liste(request):
     occupations = Occupation.objects.all().order_by("-date_entree")
     return render(request, "parc/occupation_list.html", {
-        "items": occupations,
-        "title": "Liste des occupations",
-        "create_url": "occupation_creer",
-        "empty_message": "Aucune occupation enregistrée.",
-        "back_url": "home",
+        "occupations": occupations,
     })
 
 

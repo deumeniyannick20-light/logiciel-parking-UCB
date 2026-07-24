@@ -1,0 +1,82 @@
+{% extends 'parc/base.html' %}
+
+{% block title %}Liste des parkings - Parking UCB{% endblock %}
+
+{% block content %}
+<div class="row mb-3 align-items-center">
+  <div class="col-sm-6">
+    <h1 class="m-0"><i class="fas fa-warehouse mr-2"></i>Liste des parkings</h1>
+  </div>
+  <div class="col-sm-6 text-right">
+    <a href="{% url 'parking_creer' %}" class="btn btn-success">
+      <i class="fas fa-plus-circle mr-1"></i> Ajouter un parking
+    </a>
+  </div>
+</div>
+
+<div class="card card-primary card-outline">
+  <div class="card-header">
+    <h3 class="card-title">Parkings enregistrés</h3>
+  </div>
+  
+  <div class="card-body p-0">
+    {% if parkings %}
+      <div class="table-responsive">
+        <table class="table table-striped table-hover m-0">
+          <thead class="thead-light">
+            <tr>
+              <th>Nom du parking</th>
+              <th>Adresse</th>
+              <th class="text-center">Capacité totale</th>
+              <th class="text-center">Statut</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for parking in parkings %}
+              <tr>
+                <td class="align-middle font-weight-bold">
+                  <i class="fas fa-parking text-primary mr-2"></i>{{ parking.nom }}
+                </td>
+                <td class="align-middle">
+                  {{ parking.adresse|default:"Non renseignée" }}
+                </td>
+                <td class="align-middle text-center">
+                  <span class="badge badge-info p-2">{{ parking.capacite_total }} places</span>
+                </td>
+                <td class="align-middle text-center">
+                  {% if parking.actif %}
+                    <span class="badge badge-success"><i class="fas fa-check mr-1"></i>Actif</span>
+                  {% else %}
+                    <span class="badge badge-secondary"><i class="fas fa-times mr-1"></i>Inactif</span>
+                  {% endif %}
+                </td>
+                <td class="text-right align-middle">
+                  <a href="{% url 'parking_modifier' pk=parking.pk %}" class="btn btn-sm btn-warning mr-1" title="Modifier">
+                    <i class="fas fa-edit"></i> Modifier
+                  </a>
+                  <a href="{% url 'parking_supprimer' pk=parking.pk %}" class="btn btn-sm btn-danger" title="Supprimer">
+                    <i class="fas fa-trash"></i> Supprimer
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-5 text-center text-muted">
+        <i class="fas fa-warehouse fa-3x mb-3 text-secondary"></i>
+        <p class="lead mb-0">Aucun parking n'a encore été enregistré.</p>
+        <small>Cliquez sur le bouton ci-dessus pour ajouter votre premier parking.</small>
+      </div>
+    {% endif %}
+  </div>
+  
+  <div class="card-footer">
+    <a href="{% url 'home' %}" class="btn btn-default">
+      <i class="fas fa-arrow-left mr-1"></i> Tableau de bord
+    </a>
+  </div>
+</div>
+{% endblock %}

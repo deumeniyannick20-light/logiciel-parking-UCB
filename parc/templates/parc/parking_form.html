@@ -1,19 +1,19 @@
 {% extends 'parc/base.html' %}
 
-{% block title %}{{ title|default:"Utilisateur" }} - Parking UCB{% endblock %}
+{% block title %}{{ title|default:"Parking" }} - Parking UCB{% endblock %}
 
 {% block content %}
 <div class="row mb-3">
   <div class="col-sm-6">
-    <h1 class="m-0">{{ title|default:"Gérer un utilisateur" }}</h1>
+    <h1 class="m-0">{{ title|default:"Gérer un parking" }}</h1>
   </div>
 </div>
 
 <div class="row">
   <div class="col-md-8">
-    <div class="card card-info">
+    <div class="card card-primary">
       <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-user-shield mr-1"></i> {{ title|default:"Utilisateur" }}</h3>
+        <h3 class="card-title"><i class="fas fa-warehouse mr-1"></i> {{ title|default:"Parking" }}</h3>
       </div>
       
       <form method="post">
@@ -22,10 +22,10 @@
           {{ form.as_p }}
         </div>
         <div class="card-footer">
-          <button type="submit" class="btn btn-info text-white">
+          <button type="submit" class="btn btn-primary">
             <i class="fas fa-save mr-1"></i> Enregistrer
           </button>
-          <a href="{% url 'utilisateur_liste' %}" class="btn btn-secondary ml-2">
+          <a href="{% url 'parking_liste' %}" class="btn btn-secondary ml-2">
             ← Retour à la liste
           </a>
         </div>

@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    
+    <!-- Ligne de saisie Express Vigile -->
+    <div class="card card-primary mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h3 class="card-title mb-0"><i class="fas fa-edit"></i> Saisie Express Entrée (Barrière Vigile)</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" class="row g-3">
+                {% csrf_token %}
+                <input type="hidden" name="action_entree" value="1">
+                <div class="col-md-5">
+                    <label class="form-label">Véhicule de service (Immatriculation / Titulaire)</label>
+                    {{ form_entree.vehicule }}
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Place de parking (Auto-assignée si Cadre)</label>
+                    {{ form_entree.place_parking }}
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-success w-100 fw-bold">
+                        <i class="fas fa-arrow-down"></i> Valider Entrée
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Représentation Schématique 2D du Parking -->
+    {% for parking in parkings %}
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ parking.nom }} ({{ parking.get_type_parking_display }})</h5>
+            <span class="badge bg-info fs-6">Places libres : {{ parking.places_libres_count }} / {{ parking.places.count }}</span>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-3">
+                {% for place in parking.places.all %}
+                    <div class="p-3 text-center text-white rounded shadow-sm border" 
+                         style="width: 110px; height: 90px; background-color: {% if place.statut == 'occupee' %}#dc3545{% else %}#198754{% endif %};">
+                        <div class="fw-bold fs-5">{{ place.numero }}</div>
+                        <small style="font-size: 0.75rem;">
+                            {% if place.poste_affecte %}
+                                {{ place.poste_affecte.nom }}
+                            {% else %}
+                                {{ place.get_statut_display }}
+                            {% endif %}
+                        </small>
+                    </div>
+                {% empty %}
+                    <p class="text-muted">Aucune place configurée dans ce parking.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Liste des Véhicules en Stationnement Actuel (Pour Enregistrer les Sorties) -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="fas fa-car"></i> Véhicules actuellement sur le site</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-striped table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Plaque</th>
+                        <th>Véhicule</th>
+                        <th>Titulaire / Conducteur</th>
+                        <th>Place</th>
+                        <th>Heure d'entrée</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for occ in occupations_en_cours %}
+                    <tr>
+                        <td class="fw-bold">{{ occ.vehicule.immatriculation }}</td>
+                        <td>{{ occ.vehicule.marque }} {{ occ.vehicule.modele }}</td>
+                        <td>{{ occ.vehicule.titulaire.nom }} {{ occ.vehicule.titulaire.prenom }}</td>
+                        <td><span class="badge bg-secondary">{{ occ.place_parking.numero }}</span></td>
+                        <td>{{ occ.date_entree|date:"H:i" }}</td>
+                        <td>
+                            <a href="{% url 'enregistrer_sortie' occ.id %}" class="btn btn-danger btn-sm">
+                                <i class="fas fa-arrow-up"></i> Marquer Sortie
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted p-3">Aucun véhicule actuellement garé.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

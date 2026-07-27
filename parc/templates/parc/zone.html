@@ -1,0 +1,153 @@
+{% extends 'parc/base.html' %}
+
+{% block title %}
+  {% if action == 'delete' or zone %}
+    Supprimer la zone - Parking UCB
+  {% elif form %}
+    {{ titre|default:"Gérer une zone" }} - Parking UCB
+  {% else %}
+    Liste des zones - Parking UCB
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+{% if action == 'delete' or zone %}
+  <!-- SUPPRESSION ZONE -->
+  <div class="row mb-3">
+    <div class="col-sm-6">
+      <h1 class="m-0">Supprimer la zone</h1>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card card-danger">
+        <div class="card-header">
+          <h3 class="card-title">
+            <i class="fas fa-exclamation-triangle mr-1"></i> Confirmation de suppression
+          </h3>
+        </div>
+        
+        <div class="card-body">
+          <p class="lead">Voulez-vous vraiment supprimer {{ zone }} ?</p>
+        </div>
+
+        <div class="card-footer">
+          <form method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+              <i class="fas fa-trash mr-1"></i> Confirmer la suppression
+            </button>
+          </form>
+          <a href="{% url 'zone_liste' %}" class="btn btn-secondary ml-2">
+            ← Retour à la liste des zones
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% elif form %}
+  <!-- FORMULAIRE (CRÉATION / MODIFICATION) ZONE -->
+  <div class="row mb-3">
+    <div class="col-sm-6">
+      <h1 class="m-0">{{ titre }}</h1>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card card-success">
+        <div class="card-header">
+          <h3 class="card-title">{{ titre }}</h3>
+        </div>
+        
+        <form method="post">
+          {% csrf_token %}
+          <div class="card-body">
+            {{ form.as_p }}
+          </div>
+          <div class="card-footer">
+            <button type="submit" class="btn btn-success">
+              <i class="fas fa-save mr-1"></i> Enregistrer
+            </button>
+            <a href="{% url 'zone_liste' %}" class="btn btn-secondary ml-2">
+              ← Retour à la liste des zones
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+{% else %}
+  <!-- LISTE DES ZONES -->
+  <div class="row mb-3 align-items-center">
+    <div class="col-sm-6">
+      <h1 class="m-0">Liste des zones</h1>
+    </div>
+    <div class="col-sm-6 text-right">
+      <a href="{% url 'zone_creer' %}" class="btn btn-success">
+        <i class="fas fa-plus-circle mr-1"></i> Ajouter une zone
+      </a>
+    </div>
+  </div>
+
+  <div class="card card-success card-outline">
+    <div class="card-body p-0">
+      {% if zones %}
+        <table class="table table-striped table-hover m-0">
+          <thead class="thead-light">
+            <tr>
+              <th>Nom de la zone</th>
+              <th>Superficie (m²)</th>
+              <th>Services</th>
+              <th>Nombre d'employés</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for zone in zones %}
+              <tr>
+                <td class="align-middle font-weight-bold">
+                  {{ zone.nom }}
+                </td>
+                <td class="align-middle">
+                  {{ zone.superficie }} m²
+                </td>
+                <td class="align-middle">
+                  {{ zone.services }}
+                </td>
+                <td class="align-middle">
+                  {{ zone.nombre_employes }} employés
+                </td>
+                <td class="text-right align-middle">
+                  <a href="{% url 'zone_modifier' pk=zone.pk %}" class="btn btn-sm btn-warning mr-1">
+                    <i class="fas fa-edit"></i> Modifier
+                  </a>
+                  <a href="{% url 'zone_supprimer' pk=zone.pk %}" class="btn btn-sm btn-danger">
+                    <i class="fas fa-trash"></i> Supprimer
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="card-body text-center py-5">
+          <i class="fas fa-map-marked-alt fa-3x text-muted mb-3"></i>
+          <p class="h5 text-secondary mb-2">Aucune zone n'a encore été enregistrée.</p>
+          <p class="text-muted">Cliquez sur le bouton ci-dessus pour ajouter votre première zone.</p>
+        </div>
+      {% endif %}
+    </div>
+    <div class="card-footer">
+      <a href="{% url 'home' %}" class="btn btn-default">
+        <i class="fas fa-arrow-left mr-1"></i> Retour à l'accueil
+      </a>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}

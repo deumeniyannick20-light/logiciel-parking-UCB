@@ -1,0 +1,165 @@
+{% extends 'parc/base.html' %}
+
+{% block title %}
+  {% if action == 'delete' or item %}
+    Supprimer la place - Parking UCB
+  {% elif form %}
+    {{ title|default:"Place de parking" }} - Parking UCB
+  {% else %}
+    Liste des places - Parking UCB
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+{% if action == 'delete' or item %}
+  <!-- VUE SUPPRESSION PLACE -->
+  <div class="row mb-3">
+    <div class="col-sm-6">
+      <h1 class="m-0">Supprimer la place</h1>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card card-danger">
+        <div class="card-header">
+          <h3 class="card-title">
+            <i class="fas fa-exclamation-triangle mr-1"></i> Confirmation de suppression
+          </h3>
+        </div>
+
+        <div class="card-body">
+          <p class="lead">Êtes-vous sûr de vouloir supprimer la place "{{ item }}" ?</p>
+        </div>
+
+        <div class="card-footer">
+          <form method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+              <i class="fas fa-trash mr-1"></i> Confirmer la suppression
+            </button>
+          </form>
+          <a href="{% url 'placeparking_liste' %}" class="btn btn-secondary ml-2">
+            ← Retour à la liste
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% elif form %}
+  <!-- VUE FORMULAIRE PLACE -->
+  <div class="row mb-3">
+    <div class="col-sm-6">
+      <h1 class="m-0">{{ title|default:"Gérer une place" }}</h1>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card card-success">
+        <div class="card-header">
+          <h3 class="card-title"><i class="fas fa-square-parking mr-1"></i> {{ title|default:"Place" }}</h3>
+        </div>
+        
+        <form method="post">
+          {% csrf_token %}
+          <div class="card-body">
+            {{ form.as_p }}
+          </div>
+          <div class="card-footer">
+            <button type="submit" class="btn btn-success">
+              <i class="fas fa-save mr-1"></i> Enregistrer
+            </button>
+            <a href="{% url 'placeparking_liste' %}" class="btn btn-secondary ml-2">
+              ← Retour à la liste
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+{% else %}
+  <!-- VUE LISTE PLACES -->
+  <div class="row mb-3 align-items-center">
+    <div class="col-sm-6">
+      <h1 class="m-0">Liste des places de parking</h1>
+    </div>
+    <div class="col-sm-6 text-right">
+      <a href="{% url 'placeparking_creer' %}" class="btn btn-success">
+        <i class="fas fa-plus-circle mr-1"></i> Ajouter une place
+      </a>
+    </div>
+  </div>
+
+  <div class="card card-success card-outline">
+    <div class="card-body p-0">
+      {% if places %}
+        <table class="table table-striped table-hover m-0">
+          <thead class="thead-light">
+            <tr>
+              <th>Parking</th>
+              <th>Numéro</th>
+              <th>Type</th>
+              <th>Occupation</th>
+              <th>Statut</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for place in places %}
+              <tr>
+                <td class="align-middle font-weight-bold">
+                  {{ place.parking.nom }}
+                </td>
+                <td class="align-middle">
+                  N° {{ place.numero }}
+                </td>
+                <td class="align-middle">
+                  {{ place.type_place|default:"Standard" }}
+                </td>
+                <td class="align-middle">
+                  {% if place.statut == 'libre' %}
+                    <span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Libre</span>
+                  {% else %}
+                    <span class="badge badge-danger"><i class="fas fa-car mr-1"></i>Occupée</span>
+                  {% endif %}
+                </td>
+                <td class="align-middle">
+                  {% if place.actif %}
+                    <span class="badge badge-success">Actif</span>
+                  {% else %}
+                    <span class="badge badge-secondary">Inactif</span>
+                  {% endif %}
+                </td>
+                <td class="text-right align-middle">
+                  <a href="{% url 'placeparking_modifier' pk=place.pk %}" class="btn btn-sm btn-warning mr-1">
+                    <i class="fas fa-edit"></i> Modifier
+                  </a>
+                  <a href="{% url 'placeparking_supprimer' pk=place.pk %}" class="btn btn-sm btn-danger">
+                    <i class="fas fa-trash"></i> Supprimer
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="card-body text-center py-5">
+          <i class="fas fa-parking fa-3x text-muted mb-3"></i>
+          <p class="h5 text-secondary mb-2">Aucune place de parking configurée.</p>
+          <p class="text-muted">Cliquez sur le bouton ci-dessus pour ajouter de nouvelles places.</p>
+        </div>
+      {% endif %}
+    </div>
+    <div class="card-footer">
+      <a href="{% url 'home' %}" class="btn btn-default">
+        <i class="fas fa-arrow-left mr-1"></i> Retour à l'accueil
+      </a>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}

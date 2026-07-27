@@ -13,35 +13,7 @@
 </div>
 
 <div class="row mt-4">
-  <!-- Carte : Gestion des Véhicules -->
-  <div class="col-md-4">
-    <div class="card card-primary card-outline">
-      <div class="card-body text-center">
-        <i class="fas fa-car fa-3x text-primary mb-3"></i>
-        <h5 class="card-title w-100 font-weight-bold mb-2">Véhicules</h5>
-        <p class="card-text text-muted">Gérer et consulter le parc automobile du site.</p>
-        <a href="{% url 'vehicule_liste' %}" class="btn btn-primary btn-block">
-          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Carte : Gestion du Personnel -->
-  <div class="col-md-4">
-    <div class="card card-info card-outline">
-      <div class="card-body text-center">
-        <i class="fas fa-users fa-3x text-info mb-3"></i>
-        <h5 class="card-title w-100 font-weight-bold mb-2">Personnel</h5>
-        <p class="card-text text-muted">Gérer la liste des employés et leurs accès.</p>
-        <a href="{% url 'personnel_liste' %}" class="btn btn-info btn-block text-white">
-          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Carte : Gestion des Zones -->
+  <!-- 1. Zones -->
   <div class="col-md-4">
     <div class="card card-success card-outline">
       <div class="card-body text-center">
@@ -54,11 +26,9 @@
       </div>
     </div>
   </div>
-</div>
 
-<div class="row mt-4">
-  <!-- Carte : Gestion des Postes -->
-  <div class="col-md-4 mt-4">
+  <!-- 2. Postes -->
+  <div class="col-md-4">
     <div class="card card-outline">
       <div class="card-body text-center">
         <i class="fas fa-id-badge fa-3x text-secondary mb-3"></i>
@@ -71,13 +41,29 @@
     </div>
   </div>
 
-  <!-- Carte : Gestion des Parkings -->
-  <div class="col-md-4 mt-4">
-    <div class="card card-outline">
+  <!-- 3. Personnel -->
+  <div class="col-md-4">
+    <div class="card card-info card-outline">
+      <div class="card-body text-center">
+        <i class="fas fa-users fa-3x text-info mb-3"></i>
+        <h5 class="card-title w-100 font-weight-bold mb-2">Personnel</h5>
+        <p class="card-text text-muted">Gérer la liste des employés (rattachés à un poste).</p>
+        <a href="{% url 'personnel_liste' %}" class="btn btn-info btn-block text-white">
+          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <!-- 4. Parkings -->
+  <div class="col-md-4">
+    <div class="card card-primary card-outline">
       <div class="card-body text-center">
         <i class="fas fa-warehouse fa-3x text-primary mb-3"></i>
         <h5 class="card-title w-100 font-weight-bold mb-2">Parkings</h5>
-        <p class="card-text text-muted">Gérer les parkings et informations associées.</p>
+        <p class="card-text text-muted">Gérer les parkings rattachés à une zone.</p>
         <a href="{% url 'parking_liste' %}" class="btn btn-primary btn-block">
           <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
         </a>
@@ -85,28 +71,43 @@
     </div>
   </div>
 
-  <!-- Carte : Gestion des Places -->
-  <div class="col-md-4 mt-4">
-    <div class="card card-outline">
+  <!-- 5. Places -->
+  <div class="col-md-4">
+    <div class="card card-success card-outline">
       <div class="card-body text-center">
         <i class="fas fa-square-parking fa-3x text-success mb-3"></i>
         <h5 class="card-title w-100 font-weight-bold mb-2">Places</h5>
-        <p class="card-text text-muted">Gérer les places de parking.</p>
+        <p class="card-text text-muted">Gérer les places de chaque parking.</p>
         <a href="{% url 'placeparking_liste' %}" class="btn btn-success btn-block">
           <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
         </a>
       </div>
     </div>
   </div>
+
+  <!-- 6. Véhicules -->
+  <div class="col-md-4">
+    <div class="card card-primary card-outline">
+      <div class="card-body text-center">
+        <i class="fas fa-car fa-3x text-primary mb-3"></i>
+        <h5 class="card-title w-100 font-weight-bold mb-2">Véhicules</h5>
+        <p class="card-text text-muted">Gérer le parc automobile (affecté au personnel).</p>
+        <a href="{% url 'vehicule_liste' %}" class="btn btn-primary btn-block">
+          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
+        </a>
+      </div>
+    </div>
+  </div>
 </div>
+
 <div class="row mt-4">
-  <!-- Carte : Gestion des Utilisateurs -->
-  <div class="col-md-4 mt-4">
-    <div class="card card-outline">
+  <!-- 7. Utilisateurs -->
+  <div class="col-md-4">
+    <div class="card card-info card-outline">
       <div class="card-body text-center">
         <i class="fas fa-user-shield fa-3x text-info mb-3"></i>
         <h5 class="card-title w-100 font-weight-bold mb-2">Utilisateurs</h5>
-        <p class="card-text text-muted">Gérer les comptes utilisateurs.</p>
+        <p class="card-text text-muted">Gérer les comptes du logiciel (vigile, IT…).</p>
         <a href="{% url 'utilisateur_liste' %}" class="btn btn-info btn-block text-white">
           <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
         </a>
@@ -114,13 +115,13 @@
     </div>
   </div>
 
-  <!-- Carte : Gestion des Occupations -->
-  <div class="col-md-4 mt-4">
-    <div class="card card-outline">
+  <!-- 8. Occupations -->
+  <div class="col-md-4">
+    <div class="card card-danger card-outline">
       <div class="card-body text-center">
         <i class="fas fa-clock fa-3x text-danger mb-3"></i>
         <h5 class="card-title w-100 font-weight-bold mb-2">Occupations</h5>
-        <p class="card-text text-muted">Gérer les occupations des places.</p>
+        <p class="card-text text-muted">Enregistrer les entrées et sorties des véhicules.</p>
         <a href="{% url 'occupation_liste' %}" class="btn btn-danger btn-block">
           <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
         </a>

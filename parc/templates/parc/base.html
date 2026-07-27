@@ -51,20 +51,6 @@
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'vehicule_liste' %}" class="nav-link">
-              <i class="nav-icon fas fa-car"></i>
-              <p>Gestion des véhicules</p>
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a href="{% url 'personnel_liste' %}" class="nav-link">
-              <i class="nav-icon fas fa-users"></i>
-              <p>Gestion du personnel</p>
-            </a>
-          </li>
-
-          <li class="nav-item">
             <a href="{% url 'zone_liste' %}" class="nav-link">
               <i class="nav-icon fas fa-map-marked-alt"></i>
               <p>Gestion des zones</p>
@@ -79,6 +65,13 @@
           </li>
 
           <li class="nav-item">
+            <a href="{% url 'personnel_liste' %}" class="nav-link">
+              <i class="nav-icon fas fa-users"></i>
+              <p>Gestion du personnel</p>
+            </a>
+          </li>
+
+          <li class="nav-item">
             <a href="{% url 'parking_liste' %}" class="nav-link">
               <i class="nav-icon fas fa-warehouse"></i>
               <p>Gestion des parkings</p>
@@ -89,6 +82,13 @@
             <a href="{% url 'placeparking_liste' %}" class="nav-link">
               <i class="nav-icon fas fa-square-parking"></i>
               <p>Gestion des places</p>
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a href="{% url 'vehicule_liste' %}" class="nav-link">
+              <i class="nav-icon fas fa-car"></i>
+              <p>Gestion des véhicules</p>
             </a>
           </li>
 

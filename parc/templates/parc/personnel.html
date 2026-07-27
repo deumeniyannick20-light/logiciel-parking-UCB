@@ -112,7 +112,7 @@
                   {{ personnel.nom }} {{ personnel.prenom }}
                 </td>
                 <td class="align-middle">
-                  {{ personnel.poste }}
+                  {{ personnel.poste_obj }}
                 </td>
                 <td class="text-right align-middle">
                   <a href="{% url 'personnel_modifier' pk=personnel.pk %}" class="btn btn-sm btn-warning mr-1">

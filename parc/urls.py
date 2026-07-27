@@ -45,6 +45,7 @@ urlpatterns = [
 
     path("occupations/", views.occupation_liste, name="occupation_liste"),
     path("occupations/creer/", views.occupation_creer, name="occupation_creer"),
+    path("occupations/<int:pk>/sortie/", views.occupation_sortie, name="occupation_sortie"),
     path("occupations/<int:pk>/modifier/", views.occupation_modifier, name="occupation_modifier"),
     path("occupations/<int:pk>/supprimer/", views.occupation_supprimer, name="occupation_supprimer"),
 ]

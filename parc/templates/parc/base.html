@@ -266,6 +266,12 @@
         padding: 0 16px;
       }
     }
+
+    .champ-obligatoire {
+      color: #dc3545;
+      font-weight: 700;
+      margin-left: 0.15rem;
+    }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
@@ -462,6 +468,166 @@
         formaterNomPoste(champNom);
       }
     });
+  })();
+
+  (function () {
+    var PREFIXE = 'parking_ucb_brouillon_';
+
+    function cleBrouillon() {
+      return PREFIXE + window.location.pathname;
+    }
+
+    function formulaireBrouillonnable(form) {
+      if (!form || form.method.toLowerCase() !== 'post') {
+        return false;
+      }
+      if (form.classList.contains('d-inline')) {
+        return false;
+      }
+      if (!form.querySelector('[name="csrfmiddlewaretoken"]')) {
+        return false;
+      }
+      if (window.location.pathname.indexOf('login') !== -1) {
+        return false;
+      }
+      return form.querySelectorAll(
+        'input:not([type="hidden"]):not([type="submit"]):not([type="button"]), select, textarea'
+      ).length > 0;
+    }
+
+    function serialiserFormulaire(form) {
+      var donnees = {};
+      form.querySelectorAll('input, select, textarea').forEach(function (champ) {
+        if (!champ.name || champ.name === 'csrfmiddlewaretoken' || champ.type === 'file') {
+          return;
+        }
+        if (champ.type === 'checkbox') {
+          donnees[champ.name] = champ.checked;
+        } else if (champ.type === 'radio') {
+          if (champ.checked) {
+            donnees[champ.name] = champ.value;
+          }
+        } else if (champ.tagName === 'SELECT' && champ.multiple) {
+          donnees[champ.name] = Array.prototype.map.call(
+            champ.selectedOptions,
+            function (option) { return option.value; }
+          );
+        } else {
+          donnees[champ.name] = champ.value;
+        }
+      });
+      return donnees;
+    }
+
+    function brouillonNonVide(donnees) {
+      return Object.keys(donnees).some(function (nom) {
+        var valeur = donnees[nom];
+        if (typeof valeur === 'boolean') {
+          return valeur;
+        }
+        if (Array.isArray(valeur)) {
+          return valeur.length > 0;
+        }
+        return valeur && String(valeur).trim() !== '';
+      });
+    }
+
+    function restaurerFormulaire(form, donnees) {
+      form.querySelectorAll('input, select, textarea').forEach(function (champ) {
+        if (!champ.name || champ.name === 'csrfmiddlewaretoken' || !(champ.name in donnees)) {
+          return;
+        }
+        var valeur = donnees[champ.name];
+        if (champ.type === 'checkbox') {
+          champ.checked = Boolean(valeur);
+        } else if (champ.type === 'radio') {
+          champ.checked = champ.value === String(valeur);
+        } else if (champ.tagName === 'SELECT' && champ.multiple) {
+          var valeurs = Array.isArray(valeur) ? valeur.map(String) : [];
+          Array.prototype.forEach.call(champ.options, function (option) {
+            option.selected = valeurs.indexOf(option.value) !== -1;
+          });
+        } else {
+          champ.value = valeur == null ? '' : valeur;
+        }
+      });
+      form.querySelectorAll('select, input[type="checkbox"], input[type="radio"]').forEach(function (champ) {
+        champ.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+
+    function afficherNoticeBrouillon(form) {
+      if (form.querySelector('.alert-brouillon-restaure')) {
+        return;
+      }
+      var notice = document.createElement('div');
+      notice.className = 'alert alert-info alert-dismissible fade show alert-brouillon-restaure mb-3';
+      notice.setAttribute('role', 'alert');
+      notice.innerHTML =
+        '<i class="fas fa-info-circle mr-1"></i> ' +
+        'Brouillon restauré : vos saisies précédentes ont été rechargées. ' +
+        '<button type="button" class="close" data-dismiss="alert" aria-label="Fermer">' +
+        '<span aria-hidden="true">&times;</span></button>';
+      var conteneur = form.querySelector('.card-body') || form;
+      conteneur.insertBefore(notice, conteneur.firstChild);
+    }
+
+    function initialiserBrouillonFormulaire(form) {
+      var cle = cleBrouillon();
+      var erreursServeur = form.querySelector('ul.errorlist, .invalid-feedback');
+
+      function enregistrerBrouillon() {
+        var donnees = serialiserFormulaire(form);
+        if (brouillonNonVide(donnees)) {
+          sessionStorage.setItem(cle, JSON.stringify(donnees));
+        } else {
+          sessionStorage.removeItem(cle);
+        }
+      }
+
+      if (!erreursServeur) {
+        var sauvegarde = sessionStorage.getItem(cle);
+        if (sauvegarde) {
+          try {
+            var donnees = JSON.parse(sauvegarde);
+            if (brouillonNonVide(donnees)) {
+              restaurerFormulaire(form, donnees);
+              afficherNoticeBrouillon(form);
+            }
+          } catch (erreur) {
+            sessionStorage.removeItem(cle);
+          }
+        }
+      } else {
+        enregistrerBrouillon();
+      }
+
+      var temporisateur;
+      function planifierEnregistrement() {
+        clearTimeout(temporisateur);
+        temporisateur = setTimeout(enregistrerBrouillon, 300);
+      }
+
+      form.addEventListener('input', planifierEnregistrement);
+      form.addEventListener('change', planifierEnregistrement);
+      form.addEventListener('submit', function () {
+        sessionStorage.removeItem(cle);
+      });
+    }
+
+    function demarrerBrouillons() {
+      document.querySelectorAll('form').forEach(function (form) {
+        if (formulaireBrouillonnable(form)) {
+          initialiserBrouillonFormulaire(form);
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', demarrerBrouillons);
+    } else {
+      demarrerBrouillons();
+    }
   })();
 </script>
 {% block extra_js %}{% endblock %}

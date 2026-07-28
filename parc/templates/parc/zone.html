@@ -102,6 +102,7 @@
             <tr>
               <th>Nom de la zone</th>
               <th>Superficie (m²)</th>
+              <th>Statut</th>
               <th class="text-right">Actions</th>
             </tr>
           </thead>
@@ -113,6 +114,13 @@
                 </td>
                 <td class="align-middle">
                   {{ zone.superficie }} m²
+                </td>
+                <td class="align-middle">
+                  {% if zone.actif %}
+                    <span class="badge badge-success">Actif</span>
+                  {% else %}
+                    <span class="badge badge-secondary">Inactif</span>
+                  {% endif %}
                 </td>
                 <td class="text-right align-middle">
                   <a href="{% url 'zone_modifier' pk=zone.pk %}" class="btn btn-sm btn-warning mr-1">

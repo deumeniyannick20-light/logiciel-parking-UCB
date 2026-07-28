@@ -140,7 +140,7 @@ class PlaceParking(NormalisationTexteMixin, models.Model):
             )
         if self.parking.type_parking == Parking.TYPE_RESERVE and not self.poste_affecte_id:
             raise ValidationError(
-                "Une place de parking réservé doit être affectée à un poste de direction."
+                "Une place de parking privé doit être affectée à un poste."
             )
 
     def __str__(self):

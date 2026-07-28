@@ -3,11 +3,28 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.contrib.auth import get_user_model
+from django.utils.safestring import mark_safe
 from .models import (
     Vehicule, Personnel, Zone,
     Poste, Parking, PlaceParking, Utilisateur, Occupation
 )
 from .text_format import formater_champ, CHAMPS_NUMERIQUES, formater_nom_poste
+
+
+def appliquer_asterisques_obligatoires(form, champs_supplementaires=()):
+    supplementaires = set(champs_supplementaires or ())
+    for name, field in form.fields.items():
+        if not (field.required or name in supplementaires):
+            continue
+        label = field.label
+        if not label:
+            continue
+        label_str = str(label)
+        if "champ-obligatoire" in label_str:
+            continue
+        field.label = mark_safe(
+            f'{label_str}&nbsp;<span class="champ-obligatoire" aria-hidden="true">*</span>'
+        )
 
 
 class CasseTexteFormMixin:
@@ -35,7 +52,24 @@ class CasseTexteFormMixin:
         return cleaned_data
 
 
-class VehiculeForm(CasseTexteFormMixin, forms.ModelForm):
+class FormulaireMetier(CasseTexteFormMixin, forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.configurer_champs()
+        appliquer_asterisques_obligatoires(
+            self,
+            self.champs_obligatoires_supplementaires(),
+        )
+
+    def configurer_champs(self):
+        """Surcharger pour queryset, required, ordre des champs, etc."""
+        pass
+
+    def champs_obligatoires_supplementaires(self):
+        return ()
+
+
+class VehiculeForm(FormulaireMetier):
     class Meta:
         model = Vehicule
         fields = ["immatriculation", "marque", "modele", "couleur", "personnel", "chauffeur", "actif"]
@@ -58,7 +92,7 @@ class VehiculeForm(CasseTexteFormMixin, forms.ModelForm):
         }
 
 
-class PersonnelForm(CasseTexteFormMixin, forms.ModelForm):
+class PersonnelForm(FormulaireMetier):
     class Meta:
         model = Personnel
         fields = ["nom", "prenom", "poste_obj", "email", "actif"]
@@ -77,52 +111,97 @@ class PersonnelForm(CasseTexteFormMixin, forms.ModelForm):
         }
 
 
-class ZoneForm(CasseTexteFormMixin, forms.ModelForm):
+class ZoneForm(FormulaireMetier):
     class Meta:
         model = Zone
-        fields = ["nom", "superficie", "services", "nombre_employes", "actif"]
+        fields = ["nom", "superficie", "actif"]
         labels = {
             "nom": "Nom",
             "superficie": "Superficie (m²)",
-            "services": "Services",
-            "nombre_employes": "Nombre d'employés",
             "actif": "Actif",
         }
         widgets = {
             "nom": forms.TextInput(attrs={"class": "form-control", "style": "text-transform: uppercase;"}),
             "superficie": forms.NumberInput(attrs={"class": "form-control"}),
-            "services": forms.TextInput(attrs={"class": "form-control"}),
-            "nombre_employes": forms.NumberInput(attrs={"class": "form-control"}),
         }
 
 
-class PosteForm(CasseTexteFormMixin, forms.ModelForm):
+class PosteForm(FormulaireMetier):
+    place_parking_affectee = forms.ModelChoiceField(
+        label="Place de parking affectée",
+        queryset=PlaceParking.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+
     class Meta:
         model = Poste
-        fields = ["nom", "description", "est_direction", "actif"]
+        fields = ["nom", "description", "actif"]
         labels = {
             "nom": "Nom du poste",
             "description": "Description",
-            "est_direction": "Poste de direction (DG, DGA, DRH...)",
             "actif": "Actif",
         }
         widgets = {
-            "nom": forms.TextInput(attrs={"class": "form-control", "data-nom-poste": "true"}),
+            "nom": forms.TextInput(attrs={"class": "form-control"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
+
+    def configurer_champs(self):
+        places = PlaceParking.objects.filter(
+            actif=True,
+            parking__type_parking=Parking.TYPE_RESERVE,
+        ).select_related("parking").order_by("parking__nom", "numero")
+        if self.instance.pk:
+            places = places.filter(
+                Q(poste_affecte__isnull=True) | Q(poste_affecte=self.instance)
+            )
+            place_actuelle = self.instance.places_affectees.first()
+            if place_actuelle:
+                self.fields["place_parking_affectee"].initial = place_actuelle
+        else:
+            places = places.filter(poste_affecte__isnull=True)
+        self.fields["place_parking_affectee"].queryset = places
+        self.fields["place_parking_affectee"].empty_label = "— Aucune —"
+        self.fields["place_parking_affectee"].label_from_instance = (
+            lambda obj: f"{obj.parking.nom} — Place N°{obj.numero}"
+        )
+        self.order_fields(["nom", "description", "place_parking_affectee", "actif"])
 
     def clean(self):
         cleaned_data = super().clean()
         nom = cleaned_data.get("nom")
         if nom:
-            cleaned_data["nom"] = formater_nom_poste(
-                nom,
-                cleaned_data.get("est_direction", False),
-            )
+            cleaned_data["nom"] = formater_nom_poste(nom, False)
         return cleaned_data
 
+    def clean_place_parking_affectee(self):
+        place = self.cleaned_data.get("place_parking_affectee")
+        if not place:
+            return place
+        if place.parking.type_parking != Parking.TYPE_RESERVE:
+            raise ValidationError(
+                "Seules les places de parking privé peuvent être affectées à un poste."
+            )
+        if place.poste_affecte_id and place.poste_affecte_id != self.instance.pk:
+            raise ValidationError("Cette place est déjà affectée à un autre poste.")
+        return place
 
-class ParkingForm(CasseTexteFormMixin, forms.ModelForm):
+    def save(self, commit=True):
+        poste = super().save(commit=commit)
+        if not commit:
+            return poste
+        place = self.cleaned_data.get("place_parking_affectee")
+        PlaceParking.objects.filter(poste_affecte=poste).exclude(
+            pk=place.pk if place else None
+        ).update(poste_affecte=None)
+        if place:
+            place.poste_affecte = poste
+            place.save(update_fields=["poste_affecte"])
+        return poste
+
+
+class ParkingForm(FormulaireMetier):
     class Meta:
         model = Parking
         fields = ["nom", "zone", "type_parking", "adresse", "capacite_total", "actif"]
@@ -143,14 +222,14 @@ class ParkingForm(CasseTexteFormMixin, forms.ModelForm):
         }
 
 
-class PlaceParkingForm(CasseTexteFormMixin, forms.ModelForm):
+class PlaceParkingForm(FormulaireMetier):
     class Meta:
         model = PlaceParking
         fields = ["parking", "numero", "poste_affecte", "actif"]
         labels = {
             "parking": "Parking",
             "numero": "Numéro",
-            "poste_affecte": "Poste affecté (réservé uniquement)",
+            "poste_affecte": "Poste affecté",
             "actif": "Actif",
         }
         widgets = {
@@ -159,15 +238,18 @@ class PlaceParkingForm(CasseTexteFormMixin, forms.ModelForm):
             "poste_affecte": forms.Select(attrs={"class": "form-control"}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["poste_affecte"].queryset = Poste.objects.filter(
-            est_direction=True, actif=True
-        )
+    def configurer_champs(self):
+        postes = Poste.objects.filter(actif=True)
+        if self.instance.pk and self.instance.poste_affecte_id:
+            postes = Poste.objects.filter(
+                Q(actif=True) | Q(pk=self.instance.poste_affecte_id)
+            )
+        self.fields["poste_affecte"].queryset = postes.order_by("nom")
         self.fields["poste_affecte"].required = False
+        self.fields["poste_affecte"].empty_label = "— Aucun —"
 
 
-class UtilisateurForm(CasseTexteFormMixin, forms.ModelForm):
+class UtilisateurForm(FormulaireMetier):
     poste = forms.CharField(
         label="Poste en entreprise",
         required=False,
@@ -204,8 +286,7 @@ class UtilisateurForm(CasseTexteFormMixin, forms.ModelForm):
             "telephone": forms.TextInput(attrs={"class": "form-control"}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def configurer_champs(self):
         personnel_deja_lies = Utilisateur.objects.exclude(
             pk=self.instance.pk
         ).values_list("personnel_id", flat=True)
@@ -228,6 +309,11 @@ class UtilisateurForm(CasseTexteFormMixin, forms.ModelForm):
             "role", "telephone", "mot_de_passe", "actif",
         ])
         self.fields["email"].required = True
+
+    def champs_obligatoires_supplementaires(self):
+        if not self.instance.pk:
+            return ("mot_de_passe",)
+        return ()
 
     def clean_personnel(self):
         personnel = self.cleaned_data.get("personnel")
@@ -302,7 +388,7 @@ class UtilisateurForm(CasseTexteFormMixin, forms.ModelForm):
         return utilisateur
 
 
-class OccupationEntreeForm(CasseTexteFormMixin, forms.ModelForm):
+class OccupationEntreeForm(FormulaireMetier):
     class Meta:
         model = Occupation
         fields = ["vehicule", "place_parking", "observation"]
@@ -317,8 +403,7 @@ class OccupationEntreeForm(CasseTexteFormMixin, forms.ModelForm):
             "observation": forms.TextInput(attrs={"class": "form-control"}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def configurer_champs(self):
         self.fields["vehicule"].queryset = Vehicule.objects.filter(actif=True)
         self.fields["place_parking"].queryset = PlaceParking.objects.filter(
             statut=PlaceParking.STATUT_LIBRE,
@@ -350,6 +435,7 @@ class ConnexionEmailForm(AuthenticationForm):
         self.error_messages["invalid_login"] = (
             "Email ou mot de passe incorrect. Veuillez réessayer."
         )
+        appliquer_asterisques_obligatoires(self)
 
     def clean_username(self):
         return self.cleaned_data.get("username", "").strip().lower()

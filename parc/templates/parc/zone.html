@@ -102,8 +102,6 @@
             <tr>
               <th>Nom de la zone</th>
               <th>Superficie (m²)</th>
-              <th>Services</th>
-              <th>Nombre d'employés</th>
               <th class="text-right">Actions</th>
             </tr>
           </thead>
@@ -115,12 +113,6 @@
                 </td>
                 <td class="align-middle">
                   {{ zone.superficie }} m²
-                </td>
-                <td class="align-middle">
-                  {{ zone.services }}
-                </td>
-                <td class="align-middle">
-                  {{ zone.nombre_employes }} employés
                 </td>
                 <td class="text-right align-middle">
                   <a href="{% url 'zone_modifier' pk=zone.pk %}" class="btn btn-sm btn-warning mr-1">

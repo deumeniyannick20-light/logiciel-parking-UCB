@@ -102,7 +102,8 @@
             <tr>
               <th>Parking</th>
               <th>Numéro</th>
-              <th>Type</th>
+              <th>Type parking</th>
+              <th>Poste affecté</th>
               <th>Occupation</th>
               <th>Statut</th>
               <th class="text-right">Actions</th>
@@ -118,7 +119,10 @@
                   N° {{ place.numero }}
                 </td>
                 <td class="align-middle">
-                  {{ place.type_place|default:"Standard" }}
+                  {{ place.parking.get_type_parking_display }}
+                </td>
+                <td class="align-middle">
+                  {{ place.poste_affecte|default:"—" }}
                 </td>
                 <td class="align-middle">
                   {% if place.statut == 'libre' %}

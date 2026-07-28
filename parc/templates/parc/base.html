@@ -12,41 +12,297 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Style AdminLTE -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+  <style>
+    :root {
+      --ucb-sidebar-width: 250px;
+      --ucb-topbar-height: 72px;
+      --ucb-sidebar-mini: 4.6rem;
+    }
+
+    /* Bandeau blanc fixe : logo UCB toujours visible */
+    .ucb-sidebar-top {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1050;
+      width: var(--ucb-sidebar-width);
+      height: var(--ucb-topbar-height);
+      background-color: #ffffff !important;
+      border-bottom: 1px solid #dee2e6;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+    }
+
+    .ucb-sidebar-top .btn-pushmenu {
+      color: #6c757d;
+      font-size: 1.25rem;
+      padding: 4px 6px;
+      line-height: 1;
+      border: none;
+      background: transparent;
+      flex-shrink: 0;
+    }
+
+    .ucb-sidebar-top .btn-pushmenu:hover {
+      color: #212529;
+    }
+
+    .ucb-sidebar-top .ucb-logo-full {
+      height: 48px;
+      width: auto;
+      max-width: calc(100% - 40px);
+      object-fit: contain;
+      object-position: left center;
+      flex: 1;
+    }
+
+    /* Zone sombre : sous le bandeau blanc, repliable */
+    .main-sidebar.sidebar-ucb-dark {
+      top: var(--ucb-topbar-height) !important;
+      height: calc(100vh - var(--ucb-topbar-height)) !important;
+      width: var(--ucb-sidebar-width) !important;
+      background-color: #000000 !important;
+    }
+
+    .main-header.navbar-ucb,
+    .content-wrapper,
+    .main-footer {
+      margin-left: var(--ucb-sidebar-width) !important;
+    }
+
+    .main-sidebar.sidebar-ucb-dark .brand-link {
+      background-color: #000000 !important;
+      border-bottom: 1px solid #1a1a1a;
+      color: #ffffff !important;
+    }
+
+    .main-sidebar.sidebar-ucb-dark .brand-link:hover {
+      color: #ffffff !important;
+    }
+
+    .main-sidebar.sidebar-ucb-dark .brand-text,
+    .main-sidebar.sidebar-ucb-dark .brand-link .fas {
+      color: #ffffff !important;
+    }
+
+    .main-sidebar.sidebar-ucb-dark .nav-sidebar > .nav-item > .nav-link {
+      color: #ffffff !important;
+      border-radius: 8px;
+      margin: 2px 10px;
+      padding: 10px 12px;
+      font-family: 'Source Sans Pro', sans-serif;
+      font-weight: 400;
+    }
+
+    .main-sidebar.sidebar-ucb-dark .nav-sidebar .nav-icon {
+      color: #ffffff !important;
+    }
+
+    .main-sidebar.sidebar-ucb-dark .nav-sidebar > .nav-item > .nav-link p {
+      color: #ffffff !important;
+    }
+
+    .main-sidebar.sidebar-ucb-dark .nav-sidebar > .nav-item > .nav-link:hover {
+      background-color: #1a1a1a !important;
+      color: #ffffff !important;
+    }
+
+    .main-sidebar.sidebar-ucb-dark .nav-sidebar > .nav-item > .nav-link.active {
+      background-color: #1f1f1f !important;
+      color: #ffffff !important;
+    }
+
+    /* Entrée menu sur 2 lignes (comme Parking / Management) */
+    .main-sidebar.sidebar-ucb-dark .nav-link-multiline {
+      display: flex !important;
+      align-items: center !important;
+    }
+
+    .main-sidebar.sidebar-ucb-dark .nav-link-multiline .nav-icon {
+      align-self: center;
+      margin-top: 0;
+    }
+
+    .main-sidebar.sidebar-ucb-dark .nav-link-multiline .nav-link-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+      margin: 0;
+      padding: 0;
+      color: #ffffff !important;
+      white-space: normal !important;
+      overflow: visible;
+    }
+
+    .main-sidebar.sidebar-ucb-dark .nav-link-multiline .nav-link-text > div {
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Mode réduit : zone sombre uniquement */
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark,
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark:hover {
+      width: var(--ucb-sidebar-mini) !important;
+    }
+
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark .brand-link-parking .brand-text,
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark .nav-link-multiline .nav-link-text,
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark .nav-sidebar .nav-link p {
+      display: none !important;
+    }
+
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark .brand-link-parking,
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark .nav-sidebar > .nav-item > .nav-link,
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark .nav-link-multiline {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      margin: 4px auto !important;
+      padding: 0 !important;
+      width: 2.4rem !important;
+      height: 2.4rem !important;
+    }
+
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark .nav-sidebar .nav-icon,
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark .nav-link-multiline .nav-icon {
+      margin: 0 !important;
+      width: auto !important;
+      text-align: center;
+      font-size: 1.05rem;
+    }
+
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark .brand-link-parking {
+      width: 100% !important;
+      height: auto !important;
+      min-height: 56px;
+      padding: 10px 0 !important;
+    }
+
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark .nav-sidebar > .nav-item {
+      display: flex;
+      justify-content: center;
+    }
+
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark .nav-sidebar .nav-link .nav-icon {
+      float: none !important;
+    }
+
+    body.sidebar-mini.sidebar-collapse .main-sidebar.sidebar-ucb-dark .parking-p-icon {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      font-size: 1rem;
+    }
+    .brand-link-parking {
+      background-color: #000000 !important;
+      border-bottom: 1px solid #1a1a1a !important;
+      color: #ffffff !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px;
+      padding: 14px 16px !important;
+      min-height: 72px;
+    }
+
+    .brand-link-parking:hover {
+      color: #ffffff !important;
+    }
+
+    .parking-p-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      background: #ffffff;
+      color: #000000;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1.15rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .brand-link-parking .brand-text {
+      color: #ffffff !important;
+      line-height: 1.2;
+      font-weight: 700;
+      white-space: normal;
+    }
+
+    /* Barre du haut : titre centré (zone contenu) */
+    .main-header.navbar-ucb {
+      min-height: 72px;
+      padding-top: 8px;
+      padding-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .navbar-ucb-title {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #212529;
+      letter-spacing: 0.14em;
+      margin: 0;
+      line-height: 1.2;
+      text-align: center;
+      width: 100%;
+      max-width: 100%;
+      text-transform: uppercase;
+      padding: 0 32px;
+    }
+
+    @media (max-width: 768px) {
+      .navbar-ucb-title {
+        font-size: 1.35rem;
+        letter-spacing: 0.08em;
+        padding: 0 16px;
+      }
+    }
+  </style>
   {% block extra_css %}{% endblock %}
 </head>
-<body class="hold-transition sidebar-mini layout-fixed">
+<body class="hold-transition sidebar-mini sidebar-no-expand layout-fixed">
 <div class="wrapper">
 
-  <!-- Barre du haut (Navbar) -->
-  <nav class="main-header navbar navbar-expand navbar-white navbar-light">
-    <ul class="navbar-nav">
-      <li class="nav-item">
-        <a class="nav-link" data-widget="pushmenu" href="#" role="button" ><i class="fas fa-bars"></i></a>
-      </li>
-      <li class="nav-item d-none d-sm-inline-block">
-        <span class="nav-link font-weight-light" style="font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif; color: #ff0000;">LOGICIEL DE GESTION DU PARKING DE UCB</span>
-      </li>
-    </ul>
+  <!-- Bandeau blanc fixe (logo UCB toujours visible) -->
+  <div class="ucb-sidebar-top">
+    <a href="#" class="btn-pushmenu" data-widget="pushmenu" role="button" aria-label="Réduire le menu">
+      <i class="fas fa-bars"></i>
+    </a>
+    <img src="{% static 'parc/img/ucb-logo.png' %}" alt="Union Camerounaise de Brasseries" class="ucb-logo-full">
+  </div>
+
+  <!-- Barre du haut (titre centré sur la zone contenu) -->
+  <nav class="main-header navbar navbar-expand navbar-white navbar-light navbar-ucb">
+    <h1 class="navbar-ucb-title" style="text-align: center ;font-family: times new roman;font-size: 30px;font-weight: bold;">GESTION DE LA FLOTTE AUTOMOBILE</h1>
   </nav>
 
-  <!-- Menu de gauche (Sidebar AdminLTE) -->
-  <aside class="main-sidebar sidebar-dark-primary elevation-4">
-    <a href="{% url 'home' %}" class="brand-link d-flex align-items-center">
-    <i class="fas fa-parking fa-2x ml-3 mr-2"></i>
-    <div class="brand-text font-weight-bold" style="font-family: 'Times New Roman', Times, serif; line-height: 1.2;">
+  <!-- Menu de gauche (navigation sombre repliable) -->
+  <aside class="main-sidebar sidebar-ucb-dark elevation-4">
+    <a href="{% url 'home' %}" class="brand-link brand-link-parking">
+      <span class="parking-p-icon" aria-hidden="true">P</span>
+      <div class="brand-text">
         <div>Parking</div>
         <div>Management</div>
-    </div>
-</a>
+      </div>
+    </a>
 
     <div class="sidebar">
       <nav class="mt-2">
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" style="font-family: 'Times New Roman', Times, serif;">
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
           
           <li class="nav-item">
             <a href="{% url 'home' %}" class="nav-link">
              <i class="nav-icon fas fa-home"></i>
-              <p>Accueil</p>
+              <p>Dashboard</p>
             </a>
           </li>
 
@@ -65,9 +321,12 @@
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'personnel_liste' %}" class="nav-link">
+            <a href="{% url 'personnel_liste' %}" class="nav-link nav-link-multiline">
               <i class="nav-icon fas fa-users"></i>
-              <p>Gestion du personnel</p>
+              <div class="nav-link-text">
+                <div>Gestion du personnel</div>
+                
+              </div>
             </a>
           </li>
 
@@ -132,6 +391,79 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+<script>
+  $(function () {
+    $('[data-widget="pushmenu"]').PushMenu({
+      autoCollapseSize: false,
+      enableRemember: true,
+      noTransitionAfterReload: true
+    });
+  });
+
+  document.querySelectorAll('.sidebar-ucb-dark .nav-sidebar .nav-link').forEach(function (link) {
+    if (link.href === window.location.href) {
+      link.classList.add('active');
+    }
+  });
+
+  (function () {
+    var champsMajuscules = ['nom', 'immatriculation'];
+    var champsExclus = ['email', 'superficie', 'nombre_employes', 'capacite_total', 'numero', 'telephone'];
+
+    function formaterNomPoste(champ) {
+      var formulaire = champ.form;
+      var estDirection = formulaire && formulaire.querySelector('[name="est_direction"]');
+      var valeur = champ.value.trim();
+      if (!valeur) {
+        return;
+      }
+      if (estDirection && estDirection.checked) {
+        champ.value = valeur.toUpperCase();
+      } else {
+        champ.value = valeur.split(/\s+/).map(function (mot) {
+          return mot.charAt(0).toUpperCase() + mot.slice(1).toLowerCase();
+        }).join(' ');
+      }
+    }
+
+    document.addEventListener('blur', function (event) {
+      var champ = event.target;
+      if (!champ.matches('input[type="text"], textarea')) {
+        return;
+      }
+      if (champ.type === 'email' || champ.type === 'number' || champsExclus.indexOf(champ.name) !== -1) {
+        return;
+      }
+      if (champ.name === 'nom' && champ.form && champ.form.querySelector('[name="est_direction"]')) {
+        formaterNomPoste(champ);
+        return;
+      }
+      var valeur = champ.value.trim();
+      if (!valeur) {
+        return;
+      }
+      if (champsMajuscules.indexOf(champ.name) !== -1) {
+        champ.value = valeur.toUpperCase();
+      } else {
+        champ.value = valeur.charAt(0).toUpperCase() + valeur.slice(1);
+      }
+    }, true);
+
+    document.addEventListener('change', function (event) {
+      if (event.target.name !== 'est_direction') {
+        return;
+      }
+      var formulaire = event.target.form;
+      if (!formulaire) {
+        return;
+      }
+      var champNom = formulaire.querySelector('[name="nom"]');
+      if (champNom && champNom.value.trim()) {
+        formaterNomPoste(champNom);
+      }
+    });
+  })();
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

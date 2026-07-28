@@ -85,7 +85,7 @@
   <!-- LISTE DES POSTES -->
   <div class="row mb-3 align-items-center">
     <div class="col-sm-6">
-      <h1 class="m-0">Liste des postes</h1>
+      <h1 class="m-0">Liste des postes </h1>
     </div>
     <div class="col-sm-6 text-right">
       <a href="{% url 'poste_creer' %}" class="btn btn-success">
@@ -101,7 +101,7 @@
           <thead class="thead-light">
             <tr>
               <th>Nom</th>
-              <th>Direction</th>
+              <th>Place de parking affectée</th>
               <th class="text-right">Actions</th>
             </tr>
           </thead>
@@ -110,11 +110,15 @@
               <tr>
                 <td class="align-middle font-weight-bold">{{ poste.nom }}</td>
                 <td class="align-middle">
-                  {% if poste.est_direction %}
-                    <span class="badge badge-primary">Oui</span>
-                  {% else %}
-                    <span class="badge badge-secondary">Non</span>
-                  {% endif %}
+                  {% with places=poste.places_affectees.all %}
+                    {% if places %}
+                      {% for place in places %}
+                        {{ place.parking.nom }} — Place N°{{ place.numero }}{% if not forloop.last %}<br>{% endif %}
+                      {% endfor %}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  {% endwith %}
                 </td>
                 <td class="text-right align-middle">
                   <a href="{% url 'poste_modifier' pk=poste.pk %}" class="btn btn-sm btn-warning mr-1">

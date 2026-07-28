@@ -168,7 +168,9 @@ def zone_supprimer(request, pk):
 # -------------------- POSTES --------------------
 @login_required
 def poste_liste(request):
-    postes = Poste.objects.all().order_by("nom")
+    postes = Poste.objects.prefetch_related(
+        "places_affectees__parking"
+    ).order_by("nom")
     return render(request, "parc/poste.html", {"postes": postes})
 
 
@@ -309,7 +311,9 @@ def placeparking_supprimer(request, pk):
 # -------------------- UTILISATEURS --------------------
 @login_required
 def utilisateur_liste(request):
-    utilisateurs = Utilisateur.objects.all().order_by("user__username")
+    utilisateurs = Utilisateur.objects.select_related(
+        "personnel__poste_obj"
+    ).order_by("nom", "prenom")
     return render(request, "parc/utilisateur.html", {"utilisateurs": utilisateurs})
 
 

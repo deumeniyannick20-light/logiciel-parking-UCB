@@ -3,8 +3,20 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
+from .text_format import formater_instance_texte, formater_nom_poste
 
-class Zone(models.Model):
+
+class NormalisationTexteMixin:
+    """Normalise la casse des champs texte avant enregistrement."""
+
+    champs_texte = ()
+
+    def normaliser_texte(self):
+        formater_instance_texte(self, self.champs_texte)
+
+
+class Zone(NormalisationTexteMixin, models.Model):
+    champs_texte = ("nom", "services")
     nom = models.CharField(max_length=100, unique=True)
     superficie = models.DecimalField(max_digits=8, decimal_places=2, help_text="Superficie en m²")
     services = models.CharField(max_length=200, blank=True)
@@ -20,8 +32,13 @@ class Zone(models.Model):
     def __str__(self):
         return f"{self.nom} ({self.superficie} m²)"
 
+    def save(self, *args, **kwargs):
+        self.normaliser_texte()
+        super().save(*args, **kwargs)
 
-class Poste(models.Model):
+
+class Poste(NormalisationTexteMixin, models.Model):
+    champs_texte = ("description",)
     nom = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
     est_direction = models.BooleanField(
@@ -39,8 +56,18 @@ class Poste(models.Model):
     def __str__(self):
         return self.nom
 
+    def normaliser_texte(self):
+        if self.nom:
+            self.nom = formater_nom_poste(self.nom, self.est_direction)
+        formater_instance_texte(self, self.champs_texte)
 
-class Parking(models.Model):
+    def save(self, *args, **kwargs):
+        self.normaliser_texte()
+        super().save(*args, **kwargs)
+
+
+class Parking(NormalisationTexteMixin, models.Model):
+    champs_texte = ("nom", "adresse")
     TYPE_UNIVERSEL = "universel"
     TYPE_RESERVE = "reserve"
     TYPE_CHOICES = [
@@ -72,8 +99,13 @@ class Parking(models.Model):
     def __str__(self):
         return f"{self.nom} ({self.get_type_parking_display()})"
 
+    def save(self, *args, **kwargs):
+        self.normaliser_texte()
+        super().save(*args, **kwargs)
 
-class PlaceParking(models.Model):
+
+class PlaceParking(NormalisationTexteMixin, models.Model):
+    champs_texte = ()
     STATUT_LIBRE = "libre"
     STATUT_OCCUPEE = "occupee"
     STATUT_CHOICES = [
@@ -114,8 +146,13 @@ class PlaceParking(models.Model):
     def __str__(self):
         return f"{self.parking.nom} - Place N°{self.numero}"
 
+    def save(self, *args, **kwargs):
+        self.normaliser_texte()
+        super().save(*args, **kwargs)
 
-class Personnel(models.Model):
+
+class Personnel(NormalisationTexteMixin, models.Model):
+    champs_texte = ("nom", "prenom")
     nom = models.CharField(max_length=50)
     prenom = models.CharField(max_length=50)
     poste_obj = models.ForeignKey(
@@ -135,8 +172,13 @@ class Personnel(models.Model):
     def __str__(self):
         return f"{self.nom} {self.prenom} ({self.poste_obj})"
 
+    def save(self, *args, **kwargs):
+        self.normaliser_texte()
+        super().save(*args, **kwargs)
 
-class Vehicule(models.Model):
+
+class Vehicule(NormalisationTexteMixin, models.Model):
+    champs_texte = ("immatriculation", "marque", "modele", "couleur")
     immatriculation = models.CharField(max_length=20, unique=True)
     marque = models.CharField(max_length=50)
     modele = models.CharField(max_length=50)
@@ -171,23 +213,42 @@ class Vehicule(models.Model):
     def __str__(self):
         return f"{self.immatriculation} - {self.marque} {self.modele}"
 
+    def save(self, *args, **kwargs):
+        self.normaliser_texte()
+        super().save(*args, **kwargs)
 
-class Utilisateur(models.Model):
-    ROLE_VIGILE = "vigile"
-    ROLE_IT = "it"
-    ROLE_DIRECTION = "direction"
+
+class Utilisateur(NormalisationTexteMixin, models.Model):
+    champs_texte = ("nom", "prenom")
+    ROLE_ADMINISTRATEUR = "administrateur"
+    ROLE_OPERATEUR = "operateur"
     ROLE_CHOICES = [
-        (ROLE_VIGILE, "Vigile"),
-        (ROLE_IT, "Service IT"),
-        (ROLE_DIRECTION, "Direction générale"),
+        (ROLE_ADMINISTRATEUR, "Administrateur"),
+        (ROLE_OPERATEUR, "Opérateur"),
     ]
 
+    nom = models.CharField(max_length=50)
+    prenom = models.CharField(max_length=50)
+    identifiant = models.CharField(
+        max_length=150,
+        unique=True,
+        verbose_name="Compte utilisateur",
+        help_text="Identifiant de connexion à l'application",
+    )
+    email = models.EmailField(blank=True)
+    personnel = models.OneToOneField(
+        Personnel,
+        on_delete=models.PROTECT,
+        related_name="compte_utilisateur",
+        verbose_name="Personnel véhiculé",
+        help_text="L'utilisateur doit être un membre du personnel véhiculé déjà enregistré.",
+    )
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="profil_utilisateur",
     )
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_VIGILE)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_OPERATEUR)
     telephone = models.CharField(max_length=20, blank=True)
     actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
@@ -195,13 +256,29 @@ class Utilisateur(models.Model):
     class Meta:
         verbose_name = "Utilisateur"
         verbose_name_plural = "Utilisateurs"
-        ordering = ["user__username"]
+        ordering = ["nom", "prenom"]
 
     def __str__(self):
-        return self.user.get_full_name() or self.user.username
+        return f"{self.nom} {self.prenom} ({self.identifiant})"
+
+    @property
+    def poste_entreprise(self):
+        if self.personnel_id:
+            return self.personnel.poste_obj
+        return None
+
+    def save(self, *args, **kwargs):
+        if self.personnel_id:
+            self.nom = self.personnel.nom
+            self.prenom = self.personnel.prenom
+            if not self.email and self.personnel.email:
+                self.email = self.personnel.email
+        self.normaliser_texte()
+        super().save(*args, **kwargs)
 
 
-class Occupation(models.Model):
+class Occupation(NormalisationTexteMixin, models.Model):
+    champs_texte = ("observation",)
     place_parking = models.ForeignKey(
         PlaceParking,
         on_delete=models.PROTECT,
@@ -267,6 +344,7 @@ class Occupation(models.Model):
                     )
 
     def save(self, *args, **kwargs):
+        self.normaliser_texte()
         super().save(*args, **kwargs)
 
         place = self.place_parking

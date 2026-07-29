@@ -107,8 +107,17 @@ class PersonnelForm(FormulaireMetier):
             "nom": forms.TextInput(attrs={"class": "form-control", "style": "text-transform: uppercase;"}),
             "prenom": forms.TextInput(attrs={"class": "form-control"}),
             "poste_obj": forms.Select(attrs={"class": "form-control"}),
-            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control", "autocomplete": "email"}),
         }
+
+    def configurer_champs(self):
+        self.fields["email"].required = True
+
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip().lower()
+        if not email:
+            raise ValidationError("L'email est obligatoire.")
+        return email
 
 
 class ZoneForm(FormulaireMetier):
@@ -189,9 +198,15 @@ class PosteForm(FormulaireMetier):
 
     def save(self, commit=True):
         poste = super().save(commit=commit)
+        self.places_reservees_vacantes = []
         if not commit:
             return poste
         place = self.cleaned_data.get("place_parking_affectee")
+        vacantes = PlaceParking.objects.filter(
+            poste_affecte=poste,
+            parking__type_parking=Parking.TYPE_RESERVE,
+        ).exclude(pk=place.pk if place else None)
+        self.places_reservees_vacantes = list(vacantes.values_list("pk", flat=True))
         PlaceParking.objects.filter(poste_affecte=poste).exclude(
             pk=place.pk if place else None
         ).update(poste_affecte=None)
@@ -239,15 +254,51 @@ class PlaceParkingForm(FormulaireMetier):
         }
 
     def configurer_champs(self):
-        postes = Poste.objects.filter(actif=True)
+        postes_pris = PlaceParking.objects.filter(
+            poste_affecte__isnull=False,
+            parking__type_parking=Parking.TYPE_RESERVE,
+        )
+        if self.instance.pk:
+            postes_pris = postes_pris.exclude(pk=self.instance.pk)
+        ids_pris = list(postes_pris.values_list("poste_affecte_id", flat=True))
+        filtre = Q(actif=True) & ~Q(pk__in=ids_pris)
         if self.instance.pk and self.instance.poste_affecte_id:
-            postes = Poste.objects.filter(
-                Q(actif=True) | Q(pk=self.instance.poste_affecte_id)
-            )
-        self.fields["poste_affecte"].queryset = postes.order_by("nom")
+            filtre = filtre | Q(pk=self.instance.poste_affecte_id)
+        self.fields["poste_affecte"].queryset = (
+            Poste.objects.filter(filtre).distinct().order_by("nom")
+        )
         self.fields["poste_affecte"].required = False
         self.fields["poste_affecte"].empty_label = "— Aucun —"
 
+    def clean(self):
+        cleaned_data = super().clean()
+        parking = cleaned_data.get("parking")
+        poste = cleaned_data.get("poste_affecte")
+        if not parking:
+            return cleaned_data
+        if parking.type_parking == Parking.TYPE_UNIVERSEL:
+            cleaned_data["poste_affecte"] = None
+            return cleaned_data
+        if parking.type_parking == Parking.TYPE_RESERVE and not poste:
+            raise ValidationError(
+                {"poste_affecte": "Une place réservée doit être affectée à un poste."}
+            )
+        if poste:
+            doublon = PlaceParking.objects.filter(
+                poste_affecte=poste,
+                parking__type_parking=Parking.TYPE_RESERVE,
+            )
+            if self.instance.pk:
+                doublon = doublon.exclude(pk=self.instance.pk)
+            if doublon.exists():
+                autre = doublon.select_related("parking").first()
+                raise ValidationError({
+                    "poste_affecte": (
+                        f"Le poste « {poste} » est déjà affecté à la place "
+                        f"N°{autre.numero} ({autre.parking.nom})."
+                    ),
+                })
+        return cleaned_data
 
 class UtilisateurForm(FormulaireMetier):
     mot_de_passe = forms.CharField(

@@ -60,9 +60,19 @@ body.ucb-finance-theme .card {
 }
 
 body.ucb-finance-theme .card-header {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.25) !important;
   border-bottom: 1px solid var(--ucb-border);
   color: var(--ucb-text);
+}
+
+/* Annule les bandeaux colorés AdminLTE sur tous les formulaires */
+body.ucb-finance-theme .card-primary:not(.card-outline) > .card-header,
+body.ucb-finance-theme .card-success:not(.card-outline) > .card-header,
+body.ucb-finance-theme .card-info:not(.card-outline) > .card-header,
+body.ucb-finance-theme .card-warning:not(.card-outline) > .card-header,
+body.ucb-finance-theme .card-danger:not(.card-outline) > .card-header {
+  background: rgba(0, 0, 0, 0.25) !important;
+  color: var(--ucb-text) !important;
 }
 
 body.ucb-finance-theme .card-footer {
@@ -107,17 +117,38 @@ body.ucb-finance-theme .table-hover tbody tr:hover .text-muted {
 
 body.ucb-finance-theme .form-control,
 body.ucb-finance-theme .custom-select {
-  background-color: #0f1322;
   border-color: var(--ucb-border);
   color: var(--ucb-text);
 }
 
+/* Selects : style actuel conservé (déjà lisible) */
+body.ucb-finance-theme select.form-control,
+body.ucb-finance-theme .custom-select {
+  background-color: #0f1322;
+}
+
+/* Champs texte / email / nombre : même contraste que les selects */
+body.ucb-finance-theme input.form-control:not([type="checkbox"]):not([type="radio"]),
+body.ucb-finance-theme textarea.form-control {
+  background-color: #1a2038;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
 body.ucb-finance-theme .form-control:focus,
 body.ucb-finance-theme .custom-select:focus {
-  background-color: #12172a;
   border-color: var(--ucb-accent);
   color: var(--ucb-text);
   box-shadow: 0 0 0 0.15rem rgba(77, 124, 254, 0.25);
+}
+
+body.ucb-finance-theme input.form-control:not([type="checkbox"]):not([type="radio"]):focus,
+body.ucb-finance-theme textarea.form-control:focus {
+  background-color: #1e2640;
+}
+
+body.ucb-finance-theme select.form-control:focus,
+body.ucb-finance-theme .custom-select:focus {
+  background-color: #12172a;
 }
 
 body.ucb-finance-theme label,
@@ -1120,15 +1151,20 @@ body.ucb-finance-theme .card.card-primary.card-outline {
 
 body.ucb-finance-theme .card.card-primary > .card-header,
 body.ucb-finance-theme .card.card-primary.card-outline > .card-header {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.25) !important;
   border-bottom: 1px solid var(--ucb-border);
   padding: 1rem 1.25rem;
+}
+
+body.ucb-finance-theme .card > .card-header .card-title,
+body.ucb-finance-theme .card > .card-header h3 {
+  color: var(--ucb-text) !important;
+  font-weight: 600;
 }
 
 body.ucb-finance-theme .card .card-title {
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--ucb-text-muted);
 }
 
 body.ucb-finance-theme .card .card-body {
@@ -1155,4 +1191,129 @@ body.ucb-finance-theme .content-wrapper .content {
 body.ucb-finance-theme .container-fluid {
   padding-left: 1.5rem;
   padding-right: 1.5rem;
+}
+
+/* ── Alerte place réservée sans poste ── */
+.ucb-alerte-bandeau {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: rgba(255, 45, 85, 0.12);
+  border: 1px solid rgba(255, 45, 85, 0.45);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  color: #ff8fa3;
+  font-size: 0.9rem;
+}
+
+.ucb-alerte-bandeau i {
+  color: #ff2d55;
+  font-size: 1.1rem;
+  margin-top: 0.1rem;
+}
+
+@keyframes ucb-alerte-bordure {
+  0%, 100% {
+    box-shadow: inset 0 0 0 2px #ff2d55, 0 0 8px rgba(255, 45, 85, 0.35);
+  }
+  50% {
+    box-shadow: inset 0 0 0 3px #ff5c75, 0 0 18px rgba(255, 45, 85, 0.75);
+  }
+}
+
+@keyframes ucb-alerte-bordure-intense {
+  0%, 100% {
+    box-shadow: inset 0 0 0 3px #ff2d55, 0 0 14px rgba(255, 45, 85, 0.6);
+    background-color: rgba(255, 45, 85, 0.08);
+  }
+  50% {
+    box-shadow: inset 0 0 0 4px #ff1744, 0 0 28px rgba(255, 23, 68, 0.95);
+    background-color: rgba(255, 45, 85, 0.18);
+  }
+}
+
+tr.place-alerte-sans-poste {
+  animation: ucb-alerte-bordure 1.2s ease-in-out infinite;
+}
+
+tr.place-alerte-sans-poste.place-alerte-intense {
+  animation: ucb-alerte-bordure-intense 0.45s ease-in-out 3;
+}
+
+.ucb-alerte-mode .ucb-alerte-bloque {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+/* ── Animations icônes sidebar au clic ── */
+.main-sidebar.sidebar-ucb-dark .nav-icon {
+  display: inline-block;
+  transform-origin: center center;
+  transition: transform 0.2s ease;
+}
+
+@keyframes nav-anim-gears {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(180deg); }
+}
+
+@keyframes nav-anim-map {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.18); }
+}
+
+@keyframes nav-anim-badge {
+  0%, 100% { transform: translateY(0); }
+  40%      { transform: translateY(-3px); }
+  70%      { transform: translateY(1px); }
+}
+
+@keyframes nav-anim-users {
+  0%, 100% { transform: scale(1); }
+  25%      { transform: scale(1.12); }
+  50%      { transform: scale(0.95); }
+  75%      { transform: scale(1.08); }
+}
+
+@keyframes nav-anim-warehouse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.1); }
+}
+
+@keyframes nav-anim-parking {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+
+@keyframes nav-anim-car {
+  0%, 100% { transform: translateX(0); }
+  40%      { transform: translateX(4px); }
+  70%      { transform: translateX(-1px); }
+}
+
+@keyframes nav-anim-shield {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.12); opacity: 0.85; }
+}
+
+@keyframes nav-anim-clock {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(90deg); }
+}
+
+.main-sidebar.sidebar-ucb-dark .nav-icon.nav-icon-play.fa-gears           { animation: nav-anim-gears 0.55s ease; }
+.main-sidebar.sidebar-ucb-dark .nav-icon.nav-icon-play.fa-map-marked-alt  { animation: nav-anim-map 0.45s ease; }
+.main-sidebar.sidebar-ucb-dark .nav-icon.nav-icon-play.fa-id-badge        { animation: nav-anim-badge 0.45s ease; }
+.main-sidebar.sidebar-ucb-dark .nav-icon.nav-icon-play.fa-users           { animation: nav-anim-users 0.5s ease; }
+.main-sidebar.sidebar-ucb-dark .nav-icon.nav-icon-play.fa-warehouse       { animation: nav-anim-warehouse 0.45s ease; }
+.main-sidebar.sidebar-ucb-dark .nav-icon.nav-icon-play.fa-square-parking  { animation: nav-anim-parking 0.45s ease; }
+.main-sidebar.sidebar-ucb-dark .nav-icon.nav-icon-play.fa-car             { animation: nav-anim-car 0.5s ease; }
+.main-sidebar.sidebar-ucb-dark .nav-icon.nav-icon-play.fa-user-shield     { animation: nav-anim-shield 0.45s ease; }
+.main-sidebar.sidebar-ucb-dark .nav-icon.nav-icon-play.fa-clock           { animation: nav-anim-clock 0.5s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .main-sidebar.sidebar-ucb-dark .nav-icon {
+    animation: none !important;
+  }
 }

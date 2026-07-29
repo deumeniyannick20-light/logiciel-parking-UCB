@@ -9,16 +9,17 @@
   <!-- Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Style AdminLTE -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
   <link rel="stylesheet" href="{% static 'parc/css/finance-theme.css' %}">
+  <link rel="stylesheet" href="{% static 'parc/css/ucb-brand.css' %}">
   <style>
     :root {
-      --ucb-sidebar-width: 250px;
-      --ucb-topbar-height: 72px;
+      --ucb-sidebar-width: 268px;
+      --ucb-topbar-height: 80px;
       --ucb-sidebar-mini: 4.6rem;
     }
 
@@ -34,8 +35,8 @@
       border-bottom: 1px solid #dee2e6;
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 8px 12px;
+      gap: 8px;
+      padding: 7px 10px;
     }
 
     .ucb-sidebar-top .btn-pushmenu {
@@ -52,13 +53,9 @@
       color: #212529;
     }
 
-    .ucb-sidebar-top .ucb-logo-full {
-      height: 48px;
-      width: auto;
-      max-width: calc(100% - 40px);
-      object-fit: contain;
-      object-position: left center;
+    .ucb-sidebar-top .ucb-brand {
       flex: 1;
+      min-width: 0;
     }
 
     /* Zone sombre : sous le bandeau blanc, repliable */
@@ -84,12 +81,18 @@
 
     body.sidebar-mini.sidebar-collapse .ucb-sidebar-top {
       width: var(--ucb-sidebar-mini) !important;
-      padding: 8px 6px;
+      padding: 6px 4px;
+      flex-direction: column;
       justify-content: center;
+      align-items: center;
+      gap: 5px;
+      overflow: hidden;
     }
 
-    body.sidebar-mini.sidebar-collapse .ucb-sidebar-top .ucb-logo-full {
-      display: none;
+    body.sidebar-mini.sidebar-collapse .ucb-sidebar-top .btn-pushmenu {
+      margin: 0;
+      padding: 2px 4px;
+      font-size: 1.1rem;
     }
 
     .main-sidebar.sidebar-ucb-dark .brand-link {
@@ -427,7 +430,7 @@
     <a href="#" class="btn-pushmenu" data-widget="pushmenu" role="button" aria-label="Réduire le menu">
       <i class="fas fa-bars"></i>
     </a>
-    <img src="{% static 'parc/img/ucb-logo.png' %}" alt="Union Camerounaise de Brasseries" class="ucb-logo-full">
+    {% include 'parc/includes/ucb_brand.html' %}
   </div>
 
   <!-- Barre du haut (titre centré sur la zone contenu) -->
@@ -515,28 +518,35 @@
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
           
           <li class="nav-item">
-            <a href="{% url 'home' %}" class="nav-link">
-             <i class="nav-icon fas fa-home"></i>
+            <a href="{% url 'home' %}" class="nav-link{% if menu_actif == 'home' %} active{% endif %}">
+             <i class="nav-icon fas fa-gears"></i>
               <p>Dashboard</p>
             </a>
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'zone_liste' %}" class="nav-link">
+            <a href="{% url 'zone_liste' %}" class="nav-link{% if menu_actif == 'zones' %} active{% endif %}">
               <i class="nav-icon fas fa-map-marked-alt"></i>
               <p>Gestion des zones</p>
             </a>
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'poste_liste' %}" class="nav-link">
+            <a href="{% url 'parking_liste' %}" class="nav-link{% if menu_actif == 'parkings' %} active{% endif %}">
+              <i class="nav-icon fas fa-warehouse"></i>
+              <p>Gestion des parkings</p>
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a href="{% url 'poste_liste' %}" class="nav-link{% if menu_actif == 'postes' %} active{% endif %}">
               <i class="nav-icon fas fa-id-badge"></i>
               <p>Gestion des postes</p>
             </a>
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'personnel_liste' %}" class="nav-link nav-link-multiline">
+            <a href="{% url 'personnel_liste' %}" class="nav-link nav-link-multiline{% if menu_actif == 'personnels' %} active{% endif %}">
               <i class="nav-icon fas fa-users"></i>
               <div class="nav-link-text">
                 <div>Gestion du personnel</div>
@@ -546,35 +556,28 @@
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'parking_liste' %}" class="nav-link">
-              <i class="nav-icon fas fa-warehouse"></i>
-              <p>Gestion des parkings</p>
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a href="{% url 'placeparking_liste' %}" class="nav-link">
+            <a href="{% url 'placeparking_liste' %}" class="nav-link{% if menu_actif == 'places' %} active{% endif %}">
               <i class="nav-icon fas fa-square-parking"></i>
               <p>Gestion des places</p>
             </a>
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'vehicule_liste' %}" class="nav-link">
+            <a href="{% url 'vehicule_liste' %}" class="nav-link{% if menu_actif == 'vehicules' %} active{% endif %}">
               <i class="nav-icon fas fa-car"></i>
               <p>Gestion des véhicules</p>
             </a>
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'utilisateur_liste' %}" class="nav-link">
+            <a href="{% url 'utilisateur_liste' %}" class="nav-link{% if menu_actif == 'utilisateurs' %} active{% endif %}">
               <i class="nav-icon fas fa-user-shield"></i>
               <p>Gestion des utilisateurs</p>
             </a>
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'occupation_liste' %}" class="nav-link">
+            <a href="{% url 'occupation_liste' %}" class="nav-link{% if menu_actif == 'occupations' %} active{% endif %}">
               <i class="nav-icon fas fa-clock"></i>
               <p>Gestion des occupations</p>
             </a>
@@ -616,9 +619,16 @@
   });
 
   document.querySelectorAll('.sidebar-ucb-dark .nav-sidebar .nav-link').forEach(function (link) {
-    if (link.href === window.location.href) {
-      link.classList.add('active');
-    }
+    link.addEventListener('click', function () {
+      var icon = link.querySelector('.nav-icon');
+      if (!icon) return;
+      icon.classList.remove('nav-icon-play');
+      void icon.offsetWidth;
+      icon.classList.add('nav-icon-play');
+      icon.addEventListener('animationend', function () {
+        icon.classList.remove('nav-icon-play');
+      }, { once: true });
+    });
   });
 
   (function () {

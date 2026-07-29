@@ -132,6 +132,16 @@ class PlaceParking(NormalisationTexteMixin, models.Model):
         verbose_name_plural = "Places de parking"
         unique_together = ("parking", "numero")
         ordering = ["parking__nom", "numero"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["poste_affecte"],
+                condition=models.Q(poste_affecte__isnull=False),
+                name="parc_placeparking_poste_unique",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.parking.nom} - Place N°{self.numero}"
 
     def clean(self):
         if self.parking.type_parking == Parking.TYPE_UNIVERSEL and self.poste_affecte_id:
@@ -142,11 +152,19 @@ class PlaceParking(NormalisationTexteMixin, models.Model):
             raise ValidationError(
                 "Une place de parking privé doit être affectée à un poste."
             )
-
-    def __str__(self):
-        return f"{self.parking.nom} - Place N°{self.numero}"
+        if self.poste_affecte_id:
+            doublon = PlaceParking.objects.filter(poste_affecte_id=self.poste_affecte_id)
+            if self.pk:
+                doublon = doublon.exclude(pk=self.pk)
+            if doublon.exists():
+                autre = doublon.select_related("parking").first()
+                raise ValidationError(
+                    f"Le poste « {self.poste_affecte} » est déjà affecté à la place "
+                    f"N°{autre.numero} ({autre.parking.nom})."
+                )
 
     def save(self, *args, **kwargs):
+        self.full_clean()
         self.normaliser_texte()
         super().save(*args, **kwargs)
 
@@ -160,7 +178,7 @@ class Personnel(NormalisationTexteMixin, models.Model):
         on_delete=models.PROTECT,
         related_name="personnels",
     )
-    email = models.EmailField(blank=True)
+    email = models.EmailField()
     actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
 

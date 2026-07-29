@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Case, Count, Q, Value, When
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET
@@ -22,6 +22,7 @@ from .dashboard_stats import (
     stats_parking_universel,
     serie_mensuelle,
 )
+from .place_alerte import alertes_actives, enregistrer_alertes, resoudre_alerte
 
 
 @login_required
@@ -234,6 +235,15 @@ def poste_modifier(request, pk):
         form = PosteForm(request.POST, instance=poste)
         if form.is_valid():
             form.save()
+            vacantes = getattr(form, "places_reservees_vacantes", [])
+            if vacantes:
+                enregistrer_alertes(request, vacantes)
+                messages.warning(
+                    request,
+                    "Une place réservée est désormais sans poste. "
+                    "Affectez-lui un poste pour continuer.",
+                )
+                return redirect("placeparking_liste")
             messages.success(request, "Poste modifié avec succès.")
             return redirect("poste_liste")
     else:
@@ -246,7 +256,21 @@ def poste_modifier(request, pk):
 def poste_supprimer(request, pk):
     poste = get_object_or_404(Poste, pk=pk)
     if request.method == "POST":
+        vacantes = list(
+            PlaceParking.objects.filter(
+                poste_affecte=poste,
+                parking__type_parking=Parking.TYPE_RESERVE,
+            ).values_list("pk", flat=True)
+        )
         poste.delete()
+        if vacantes:
+            enregistrer_alertes(request, vacantes)
+            messages.warning(
+                request,
+                "La suppression du poste a libéré une place réservée. "
+                "Affectez-lui un nouveau poste pour continuer.",
+            )
+            return redirect("placeparking_liste")
         messages.success(request, "Poste supprimé avec succès.")
         return redirect("poste_liste")
 
@@ -256,7 +280,23 @@ def poste_supprimer(request, pk):
 # -------------------- PARKINGS --------------------
 @login_required
 def parking_liste(request):
-    parkings = Parking.objects.all().order_by("nom")
+    parkings = (
+        Parking.objects.select_related("zone")
+        .annotate(nb_places=Count("places"))
+        .order_by(
+            Case(
+                When(zone__nom__iexact="bassa", then=Value(0)),
+                default=Value(1),
+            ),
+            "-nb_places",
+            Case(
+                When(type_parking=Parking.TYPE_UNIVERSEL, then=Value(0)),
+                When(type_parking=Parking.TYPE_RESERVE, then=Value(1)),
+                default=Value(2),
+            ),
+            "nom",
+        )
+    )
     return render(request, "parc/parking.html", {"parkings": parkings})
 
 
@@ -303,8 +343,15 @@ def parking_supprimer(request, pk):
 # -------------------- PLACES DE PARKING --------------------
 @login_required
 def placeparking_liste(request):
-    places = PlaceParking.objects.all().order_by("parking__nom", "numero")
-    return render(request, "parc/placeparking.html", {"places": places})
+    places = PlaceParking.objects.select_related(
+        "parking", "poste_affecte"
+    ).order_by("parking__nom", "numero")
+    places_alerte = set(alertes_actives(request))
+    return render(request, "parc/placeparking.html", {
+        "places": places,
+        "places_alerte": places_alerte,
+        "mode_alerte_places": bool(places_alerte),
+    })
 
 
 @login_required
@@ -328,12 +375,23 @@ def placeparking_modifier(request, pk):
         form = PlaceParkingForm(request.POST, instance=place)
         if form.is_valid():
             form.save()
-            messages.success(request, "Place de parking modifiée avec succès.")
+            resoudre_alerte(request, place.pk)
+            if alertes_actives(request):
+                messages.warning(
+                    request,
+                    "Cette place est corrigée. Il reste d'autres places réservées sans poste.",
+                )
+            else:
+                messages.success(request, "Place de parking modifiée avec succès.")
             return redirect("placeparking_liste")
     else:
         form = PlaceParkingForm(instance=place)
 
-    return render(request, "parc/placeparking.html", {"form": form, "title": "Modifier une place de parking"})
+    return render(request, "parc/placeparking.html", {
+        "form": form,
+        "title": "Modifier une place de parking",
+        "place_alerte_en_cours": pk in alertes_actives(request),
+    })
 
 
 @login_required

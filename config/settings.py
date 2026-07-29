@@ -48,6 +48,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'parc.middleware.ConnexionObligatoireMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'parc.middleware.PlaceReserveeAlerteMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -64,6 +65,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'parc.context_processors.utilisateur_connecte',
+                'parc.context_processors.menu_actif',
             ],
         },
     },

@@ -5,7 +5,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Connexion - UCB Parking</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'parc/css/ucb-brand.css' %}">
   <style>
     * {
       box-sizing: border-box;
@@ -41,13 +44,6 @@
       justify-content: center;
       align-items: center;
       margin-bottom: 28px;
-    }
-
-    .ucb-login-brand img {
-      display: block;
-      width: min(100%, 420px);
-      height: auto;
-      object-fit: contain;
     }
 
     .ucb-login-title {
@@ -170,7 +166,7 @@
 
   <div class="ucb-login-card">
     <div class="ucb-login-brand">
-      <img src="{% static 'parc/img/ucb-logo.png' %}" alt="Union Camerounaise de Brasseries">
+      {% include 'parc/includes/ucb_brand.html' with brand_variant='large' %}
     </div>
 
     <h1 class="ucb-login-title">

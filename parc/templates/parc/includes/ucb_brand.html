@@ -1,0 +1,17 @@
+{% comment %}
+Marque UCB vectorielle — texte HTML net (pas d'image PNG).
+Usage : {% include 'parc/includes/ucb_brand.html' %}
+        {% include 'parc/includes/ucb_brand.html' with brand_variant='large' %}
+{% endcomment %}
+<div class="ucb-brand{% if brand_variant %} ucb-brand--{{ brand_variant }}{% endif %}" role="img" aria-label="Union Camerounaise de Brasseries">
+  <span class="ucb-brand-emblem" aria-hidden="true">
+    <span class="ucb-brand-lozenge"><span>U</span></span>
+    <span class="ucb-brand-lozenge"><span>C</span></span>
+    <span class="ucb-brand-lozenge"><span>B</span></span>
+  </span>
+  <span class="ucb-brand-text" aria-hidden="true">
+    <span>Union</span>
+    <span>Camerounaise</span>
+    <span>de Brasseries</span>
+  </span>
+</div>

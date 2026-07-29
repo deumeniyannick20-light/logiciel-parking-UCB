@@ -58,7 +58,7 @@
 
   <div class="row">
     <div class="col-md-8">
-      <div class="card card-success">
+      <div class="card card-primary">
         <div class="card-header">
           <h3 class="card-title">{{ titre }}</h3>
         </div>
@@ -69,7 +69,7 @@
             {{ form.as_p }}
           </div>
           <div class="card-footer">
-            <button type="submit" class="btn btn-success">
+            <button type="submit" class="btn btn-primary">
               <i class="fas fa-save mr-1"></i> Enregistrer
             </button>
             <a href="{% url 'poste_liste' %}" class="btn btn-secondary ml-2">
@@ -94,7 +94,7 @@
     </div>
   </div>
 
-  <div class="card card-success card-outline">
+  <div class="card card-primary card-outline">
     <div class="card-body p-0">
       {% if postes %}
         <table class="table table-striped table-hover m-0">

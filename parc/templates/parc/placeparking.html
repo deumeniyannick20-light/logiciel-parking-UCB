@@ -58,18 +58,24 @@
 
   <div class="row">
     <div class="col-md-8">
-      <div class="card card-success">
+      <div class="card card-primary">
         <div class="card-header">
           <h3 class="card-title"><i class="fas fa-square-parking mr-1"></i> {{ title|default:"Place" }}</h3>
         </div>
         
         <form method="post">
           {% csrf_token %}
+          {% if place_alerte_en_cours %}
+          <div class="alert alert-danger mx-3 mt-3 mb-0">
+            <i class="fas fa-exclamation-triangle mr-1"></i>
+            Cette place réservée doit être réaffectée à un poste avant toute autre action dans l'application.
+          </div>
+          {% endif %}
           <div class="card-body">
             {{ form.as_p }}
           </div>
           <div class="card-footer">
-            <button type="submit" class="btn btn-success">
+            <button type="submit" class="btn btn-primary">
               <i class="fas fa-save mr-1"></i> Enregistrer
             </button>
             <a href="{% url 'placeparking_liste' %}" class="btn btn-secondary ml-2">
@@ -83,18 +89,28 @@
 
 {% else %}
   <!-- VUE LISTE PLACES -->
+  {% if mode_alerte_places %}
+  <div class="ucb-alerte-bandeau" id="ucb-alerte-bandeau">
+    <i class="fas fa-exclamation-triangle"></i>
+    <span>
+      <strong>Action requise :</strong> une ou plusieurs places réservées n'ont plus de poste affecté.
+      Cliquez sur <strong>Modifier</strong> sur la ligne signalée en rouge et assignez un poste.
+    </span>
+  </div>
+  {% endif %}
+
   <div class="row mb-3 align-items-center">
     <div class="col-sm-6">
       <h1 class="m-0">Liste des places de parking</h1>
     </div>
     <div class="col-sm-6 text-right">
-      <a href="{% url 'placeparking_creer' %}" class="btn btn-success">
+      <a href="{% url 'placeparking_creer' %}" class="btn btn-success{% if mode_alerte_places %} ucb-alerte-bloque{% endif %}">
         <i class="fas fa-plus-circle mr-1"></i> Ajouter une place
       </a>
     </div>
   </div>
 
-  <div class="card card-success card-outline">
+  <div class="card card-primary card-outline{% if mode_alerte_places %} ucb-alerte-mode{% endif %}" id="ucb-liste-places">
     <div class="card-body p-0">
       {% if places %}
         <table class="table table-striped table-hover m-0">
@@ -111,7 +127,8 @@
           </thead>
           <tbody>
             {% for place in places %}
-              <tr>
+              <tr class="{% if place.pk in places_alerte %}place-alerte-sans-poste{% endif %}"
+                  {% if place.pk in places_alerte %}data-place-alerte="1" id="place-alerte-{{ place.pk }}"{% endif %}>
                 <td class="align-middle font-weight-bold">
                   {{ place.parking.nom }}
                 </td>
@@ -121,8 +138,14 @@
                 <td class="align-middle">
                   {{ place.parking.get_type_parking_display }}
                 </td>
-                <td class="align-middle">
-                  {{ place.poste_affecte|default:"—" }}
+                <td class="align-middle{% if place.pk in places_alerte %} text-danger font-weight-bold{% endif %}">
+                  {% if place.poste_affecte %}
+                    {{ place.poste_affecte }}
+                  {% elif place.parking.type_parking == 'reserve' %}
+                    — AUCUN POSTE —
+                  {% else %}
+                    Aucun poste
+                  {% endif %}
                 </td>
                 <td class="align-middle">
                   {% if place.statut == 'libre' %}
@@ -139,10 +162,12 @@
                   {% endif %}
                 </td>
                 <td class="text-right align-middle">
-                  <a href="{% url 'placeparking_modifier' pk=place.pk %}" class="btn btn-sm btn-warning mr-1">
+                  <a href="{% url 'placeparking_modifier' pk=place.pk %}"
+                     class="btn btn-sm btn-warning mr-1 ucb-alerte-modifier{% if place.pk in places_alerte %} ucb-alerte-autorise{% endif %}">
                     <i class="fas fa-edit"></i> Modifier
                   </a>
-                  <a href="{% url 'placeparking_supprimer' pk=place.pk %}" class="btn btn-sm btn-danger">
+                  <a href="{% url 'placeparking_supprimer' pk=place.pk %}"
+                     class="btn btn-sm btn-danger ucb-alerte-bloque{% if place.pk in places_alerte %} d-none{% endif %}">
                     <i class="fas fa-trash"></i> Supprimer
                   </a>
                 </td>
@@ -159,11 +184,48 @@
       {% endif %}
     </div>
     <div class="card-footer">
-      <a href="{% url 'home' %}" class="btn btn-default">
+      <a href="{% url 'home' %}" class="btn btn-default ucb-alerte-bloque">
         <i class="fas fa-arrow-left mr-1"></i> Retour à l'accueil
       </a>
     </div>
   </div>
+
+  {% if mode_alerte_places %}
+  <script>
+  (function () {
+    var modeAlerte = true;
+    var lignes = document.querySelectorAll('[data-place-alerte="1"]');
+
+    function intensifier() {
+      lignes.forEach(function (ligne) {
+        ligne.classList.remove('place-alerte-intense');
+        void ligne.offsetWidth;
+        ligne.classList.add('place-alerte-intense');
+      });
+    }
+
+    document.addEventListener('click', function (e) {
+      if (!modeAlerte) return;
+      if (e.target.closest('.ucb-alerte-autorise')) return;
+      var link = e.target.closest('a[href]');
+      if (link) {
+        e.preventDefault();
+        e.stopPropagation();
+        intensifier();
+        return;
+      }
+      if (!e.target.closest('#ucb-liste-places')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      intensifier();
+    }, true);
+
+    if (lignes.length) {
+      lignes[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  })();
+  </script>
+  {% endif %}
 {% endif %}
 
 {% endblock %}

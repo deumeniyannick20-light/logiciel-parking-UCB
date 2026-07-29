@@ -2,7 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.http import JsonResponse
 from django.utils import timezone
+from django.views.decorators.http import require_GET
+import json
 
 from .models import (
     Vehicule, Personnel, Zone,
@@ -13,15 +16,51 @@ from .forms import (
     PosteForm, ParkingForm, PlaceParkingForm, UtilisateurForm,
     OccupationEntreeForm,
 )
+from .dashboard_stats import (
+    contexte_tableau_de_bord,
+    stats_vehicules,
+    stats_parking_universel,
+    serie_mensuelle,
+)
 
 
+@login_required
 def dashboard(request):
     return render(request, "parc/dashboard.html")
 
 
 @login_required
 def home(request):
-    return render(request, "parc/home.html")
+    dashboard = contexte_tableau_de_bord()
+    return render(request, "parc/home.html", {
+        "dashboard": dashboard,
+        "dashboard_json": json.dumps(dashboard),
+    })
+
+
+@login_required
+@require_GET
+def api_dashboard_vehicules(request):
+    donnees = stats_vehicules()
+    mois = request.GET.get("mois")
+    if mois:
+        annee, num_mois = map(int, mois.split("-"))
+        donnees["mensuel"] = serie_mensuelle(annee=annee, mois=num_mois)
+    return JsonResponse(donnees)
+
+
+@login_required
+@require_GET
+def api_dashboard_parking(request, pk):
+    parking = get_object_or_404(Parking, pk=pk, type_parking=Parking.TYPE_UNIVERSEL)
+    donnees = stats_parking_universel(parking)
+    mois = request.GET.get("mois")
+    if mois:
+        annee, num_mois = map(int, mois.split("-"))
+        donnees["mensuel"] = serie_mensuelle(
+            parking_id=parking.pk, annee=annee, mois=num_mois
+        )
+    return JsonResponse(donnees)
 
 
 # -------------------- VEHICULES --------------------

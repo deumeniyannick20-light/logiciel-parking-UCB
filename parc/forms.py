@@ -250,20 +250,11 @@ class PlaceParkingForm(FormulaireMetier):
 
 
 class UtilisateurForm(FormulaireMetier):
-    poste = forms.CharField(
-        label="Poste en entreprise",
-        required=False,
-        widget=forms.TextInput(attrs={
-            "class": "form-control",
-            "readonly": "readonly",
-            "id": "id_poste_entreprise",
-        }),
-    )
     mot_de_passe = forms.CharField(
         label="Mot de passe",
-        required=False,
+        required=True,
         widget=forms.PasswordInput(attrs={"class": "form-control", "autocomplete": "new-password"}),
-        help_text="Obligatoire à la création. Laissez vide pour ne pas le modifier.",
+        help_text="Le mot de passe est obligatoire pour la connexion à l'application.",
     )
 
     class Meta:
@@ -273,7 +264,7 @@ class UtilisateurForm(FormulaireMetier):
             "role", "telephone", "actif",
         ]
         labels = {
-            "personnel": "Personnel véhiculé",
+            "personnel": "Personnel",
             "email": "Email",
             "role": "Rôle dans l'application",
             "telephone": "Téléphone",
@@ -301,24 +292,17 @@ class UtilisateurForm(FormulaireMetier):
             pk__in=personnel_ids
         ).select_related("poste_obj").order_by("nom", "prenom")
         self.fields["personnel"].required = True
-        self.fields["personnel"].empty_label = "— Sélectionner un personnel véhiculé —"
-        if self.instance.pk and self.instance.personnel_id:
-            self.fields["poste"].initial = str(self.instance.personnel.poste_obj)
+        self.fields["personnel"].empty_label = "— Sélectionner un personnel —"
         self.order_fields([
-            "personnel", "poste", "email",
+            "personnel", "email",
             "role", "telephone", "mot_de_passe", "actif",
         ])
         self.fields["email"].required = True
 
-    def champs_obligatoires_supplementaires(self):
-        if not self.instance.pk:
-            return ("mot_de_passe",)
-        return ()
-
     def clean_personnel(self):
         personnel = self.cleaned_data.get("personnel")
         if not personnel:
-            raise ValidationError("Sélectionnez un personnel véhiculé déjà enregistré.")
+            raise ValidationError("Sélectionnez un personnel déjà enregistré.")
         deja_utilise = Utilisateur.objects.filter(personnel=personnel)
         if self.instance.pk:
             deja_utilise = deja_utilise.exclude(pk=self.instance.pk)
@@ -336,8 +320,8 @@ class UtilisateurForm(FormulaireMetier):
         cleaned_data = super().clean()
 
         mot_de_passe = cleaned_data.get("mot_de_passe")
-        if not self.instance.pk and not mot_de_passe:
-            self.add_error("mot_de_passe", "Le mot de passe est obligatoire à la création.")
+        if not mot_de_passe:
+            self.add_error("mot_de_passe", "Le mot de passe est obligatoire.")
 
         personnel = cleaned_data.get("personnel")
         if personnel:
@@ -369,8 +353,7 @@ class UtilisateurForm(FormulaireMetier):
             user.last_name = utilisateur.nom
             user.email = utilisateur.email
             user.is_active = utilisateur.actif
-            if mot_de_passe:
-                user.set_password(mot_de_passe)
+            user.set_password(mot_de_passe)
             user.save()
         else:
             user = User.objects.create_user(
@@ -433,7 +416,7 @@ class ConnexionEmailForm(AuthenticationForm):
             "autocomplete": "current-password",
         })
         self.error_messages["invalid_login"] = (
-            "Email ou mot de passe incorrect. Veuillez réessayer."
+            "Email ou mot de passe incorrect, ou compte utilisateur inactif."
         )
         appliquer_asterisques_obligatoires(self)
 

@@ -169,34 +169,25 @@
 <script>
   (function () {
     var selectPersonnel = document.getElementById('id_personnel');
-    var champPoste = document.getElementById('id_poste_entreprise');
     var champEmail = document.querySelector('[name="email"]');
-    if (!selectPersonnel || !champPoste) {
+    if (!selectPersonnel || !champEmail) {
       return;
     }
     var personnelData = {
       {% for p in form.fields.personnel.queryset %}
-      "{{ p.pk }}": {
-        poste: "{{ p.poste_obj|escapejs }}",
-        email: "{{ p.email|escapejs }}"
-      }{% if not forloop.last %},{% endif %}
+      "{{ p.pk }}": "{{ p.email|escapejs }}"{% if not forloop.last %},{% endif %}
       {% endfor %}
     };
 
-    function mettreAJourDepuisPersonnel() {
-      var data = personnelData[selectPersonnel.value];
-      if (!data) {
-        champPoste.value = '';
-        return;
-      }
-      champPoste.value = data.poste || '';
-      if (champEmail && data.email && !champEmail.value.trim()) {
-        champEmail.value = data.email;
+    function mettreAJourEmailDepuisPersonnel() {
+      var email = personnelData[selectPersonnel.value];
+      if (email && !champEmail.value.trim()) {
+        champEmail.value = email;
       }
     }
 
-    selectPersonnel.addEventListener('change', mettreAJourDepuisPersonnel);
-    mettreAJourDepuisPersonnel();
+    selectPersonnel.addEventListener('change', mettreAJourEmailDepuisPersonnel);
+    mettreAJourEmailDepuisPersonnel();
   })();
 </script>
 {% endif %}

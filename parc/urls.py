@@ -9,12 +9,16 @@ urlpatterns = [
         auth_views.LoginView.as_view(
             template_name="parc/login.html",
             authentication_form=ConnexionEmailForm,
+            redirect_authenticated_user=True,
         ),
         name="login",
     ),
     path("accounts/logout/", auth_views.LogoutView.as_view(next_page="login"), name="logout"),
 
     path("", views.home, name="home"),
+
+    path("api/dashboard/vehicules/", views.api_dashboard_vehicules, name="api_dashboard_vehicules"),
+    path("api/dashboard/parking/<int:pk>/", views.api_dashboard_parking, name="api_dashboard_parking"),
 
     path("vehicules/", views.vehicule_liste, name="vehicule_liste"),
     path("vehicules/creer/", views.vehicule_creer, name="vehicule_creer"),

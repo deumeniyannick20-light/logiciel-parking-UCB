@@ -1,129 +1,230 @@
 {% extends 'parc/base.html' %}
+{% load static %}
 
-{% block title %}Accueil - Parking UCB{% endblock %}
+{% block title %}Tableau de bord - Parking UCB{% endblock %}
 
 {% block content %}
-<div class="row mb-3">
-  <div class="col-12 text-center">
-    
+<div class="fin-dashboard">
+
+  {# ── 4 cartes métriques (style Fintellis) ── #}
+  <div class="fin-kpi-row">
+    <article class="fin-metric fin-metric--blue fin-metric--clickable" data-type="vehicules" tabindex="0" role="button">
+      <div class="fin-metric-top">
+        <div class="fin-metric-icon"><i class="fas fa-car"></i></div>
+        <div class="fin-metric-spark"><canvas id="spark-vehicules" aria-hidden="true"></canvas></div>
+      </div>
+      <p class="fin-metric-label">Véhicules présents</p>
+      <div class="fin-metric-value">{{ dashboard.vehicules.presents }}</div>
+      <div class="fin-metric-foot">
+        {% if dashboard.vehicules.tendance.direction == 'hausse' %}
+          <span class="fin-trend up"><i class="fas fa-arrow-up"></i> +{{ dashboard.vehicules.tendance.variation }} vs h-1</span>
+        {% elif dashboard.vehicules.tendance.direction == 'baisse' %}
+          <span class="fin-trend down"><i class="fas fa-arrow-down"></i> {{ dashboard.vehicules.tendance.variation }} vs h-1</span>
+        {% else %}
+          <span class="fin-trend flat">Stable sur la dernière heure</span>
+        {% endif %}
+        <span class="fin-metric-hint">{{ dashboard.vehicules.enregistres }} enregistrés</span>
+      </div>
+    </article>
+
+    <article class="fin-metric fin-metric--teal">
+      <div class="fin-metric-top">
+        <div class="fin-metric-icon"><i class="fas fa-square-parking"></i></div>
+        <div class="fin-metric-spark"><canvas id="spark-libres" aria-hidden="true"></canvas></div>
+      </div>
+      <p class="fin-metric-label">Places libres (universel)</p>
+      <div class="fin-metric-value">{{ dashboard.occupation_globale.libres }}</div>
+      <div class="fin-metric-foot">
+        <span class="fin-trend {% if dashboard.taux_disponibilite >= 20 %}up{% else %}down{% endif %}">
+          {{ dashboard.taux_disponibilite }}&nbsp;% disponible
+        </span>
+        <span class="fin-metric-hint">sur {{ dashboard.occupation_globale.total }} places</span>
+      </div>
+    </article>
+
+    <article class="fin-metric fin-metric--gold">
+      <div class="fin-metric-top">
+        <div class="fin-metric-icon"><i class="fas fa-sign-in-alt"></i></div>
+        <div class="fin-metric-spark"><canvas id="spark-entrees" aria-hidden="true"></canvas></div>
+      </div>
+      <p class="fin-metric-label">Entrées aujourd'hui</p>
+      <div class="fin-metric-value">{{ dashboard.mouvements_jour.entrees }}</div>
+      <div class="fin-metric-foot">
+        {% if dashboard.flux_24h.tendance_entrees.direction == 'hausse' %}
+          <span class="fin-trend up"><i class="fas fa-arrow-up"></i> +{{ dashboard.flux_24h.tendance_entrees.variation }} dernière heure</span>
+        {% elif dashboard.flux_24h.tendance_entrees.direction == 'baisse' %}
+          <span class="fin-trend down"><i class="fas fa-arrow-down"></i> {{ dashboard.flux_24h.tendance_entrees.variation }} dernière heure</span>
+        {% else %}
+          <span class="fin-trend flat">Flux régulier</span>
+        {% endif %}
+      </div>
+    </article>
+
+    <article class="fin-metric fin-metric--purple{% if dashboard.occupation_globale.alerte %} fin-metric--alert{% endif %}">
+      <div class="fin-metric-top">
+        <div class="fin-metric-icon"><i class="fas fa-chart-pie"></i></div>
+        <div class="fin-metric-spark"><canvas id="spark-sorties" aria-hidden="true"></canvas></div>
+      </div>
+      <p class="fin-metric-label">Taux d'occupation universel</p>
+      <div class="fin-metric-value">{{ dashboard.occupation_globale.pct }}<span class="fin-metric-unit">%</span></div>
+      <div class="fin-metric-foot">
+        {% if dashboard.occupation_globale.alerte %}
+          <span class="fin-trend down"><i class="fas fa-exclamation-triangle"></i> Seuil critique ≥ 80&nbsp;%</span>
+        {% else %}
+          <span class="fin-trend up">Capacité dans la norme</span>
+        {% endif %}
+        <span class="fin-metric-hint">{{ dashboard.mouvements_jour.sorties }} sorties aujourd'hui</span>
+      </div>
+    </article>
+  </div>
+
+  {# ── En-tête de section + actions ── #}
+  <div class="fin-section-head">
+    <div>
+      <h2 class="fin-section-title">Vue opérationnelle du site</h2>
+      <p class="fin-section-sub">Synthèse temps réel — flux de mouvements et occupation des parkings universels UCB.</p>
+    </div>
+    <div class="fin-actions">
+      <a href="{% url 'occupation_creer' %}" class="btn fin-btn-primary">
+        <i class="fas fa-plus mr-1"></i> Enregistrer un mouvement
+      </a>
+      <a href="{% url 'occupation_liste' %}" class="btn fin-btn-ghost">
+        Voir l'historique <i class="fas fa-arrow-right ml-1"></i>
+      </a>
+    </div>
+  </div>
+
+  {# ── Graphique principal + panneau latéral ── #}
+  <div class="fin-charts-row">
+    <div class="fin-panel fin-panel--chart">
+      <div class="fin-panel-header">
+        <div>
+          <h3 class="fin-panel-title">Entrées vs Sorties</h3>
+          <p class="fin-panel-desc">Flux horaire sur les 24 dernières heures — comparaison des mouvements enregistrés par le vigile.</p>
+        </div>
+        <span class="fin-badge"><i class="fas fa-circle fin-pulse"></i> Live</span>
+      </div>
+      <div class="fin-chart-area">
+        <canvas id="dash-flux-chart"></canvas>
+      </div>
+      <div class="fin-chart-legend">
+        <span class="fin-legend-item"><span class="fin-legend-dot fin-legend-dot--blue"></span> Entrées</span>
+        <span class="fin-legend-item"><span class="fin-legend-dot fin-legend-dot--gold"></span> Sorties</span>
+      </div>
+    </div>
+
+    <div class="fin-panel fin-panel--side">
+      <h3 class="fin-panel-title">Occupation universelle</h3>
+      <p class="fin-panel-desc">Disponibilité instantanée du parc universel (employés &amp; cadres).</p>
+      <div class="fin-occupation-hero">
+        <div class="fin-occupation-pct{% if dashboard.occupation_globale.alerte %} fin-occupation-pct--alert{% endif %}">
+          {{ dashboard.occupation_globale.pct }}<span>%</span>
+        </div>
+        <div class="fin-occupation-donut">
+          <canvas id="dash-occupation-donut" aria-hidden="true"></canvas>
+        </div>
+      </div>
+      <ul class="fin-metrics-list">
+        <li>
+          <span class="fin-metrics-label">Places occupées</span>
+          <strong>{{ dashboard.occupation_globale.occupes }}</strong>
+        </li>
+        <li>
+          <span class="fin-metrics-label">Places libres</span>
+          <strong class="fin-text-success">{{ dashboard.occupation_globale.libres }}</strong>
+        </li>
+        <li>
+          <span class="fin-metrics-label">Capacité totale</span>
+          <strong>{{ dashboard.occupation_globale.total }}</strong>
+        </li>
+        <li>
+          <span class="fin-metrics-label">Parkings universels actifs</span>
+          <strong>{{ dashboard.parkings_universels|length }}</strong>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  {# ── Détail par parking ── #}
+  <div class="fin-section-head fin-section-head--compact">
+    <h3 class="fin-section-title fin-section-title--sm">Détail par parking universel</h3>
+    <p class="fin-section-sub mb-0">Cliquez sur une carte pour l'historique mensuel et les mouvements associés.</p>
+  </div>
+
+  <div class="fin-parking-grid" id="dash-kpi-grid">
+    {% for p in dashboard.parkings_universels %}
+    <article class="fin-parking-card{% if p.alerte %} fin-parking-card--alert{% endif %}"
+             data-type="parking" data-id="{{ p.id }}" tabindex="0" role="button">
+      <div class="fin-parking-card-head">
+        <div class="fin-parking-icon"><i class="fas fa-warehouse"></i></div>
+        <div class="fin-parking-donut"><canvas id="donut-parking-{{ p.id }}" aria-hidden="true"></canvas></div>
+      </div>
+      <h4 class="fin-parking-name">{{ p.nom }}</h4>
+      <div class="fin-parking-stats">
+        <span class="fin-parking-big">{{ p.libres }}</span>
+        <span class="fin-parking-sub">libres · {{ p.occupes }} occupées</span>
+      </div>
+      <div class="fin-parking-bar">
+        <div class="fin-parking-bar-fill{% if p.alerte %} fin-parking-bar-fill--alert{% endif %}"
+             style="width: {{ p.pct_occupe }}%"></div>
+      </div>
+      <p class="fin-parking-desc">
+        {{ p.pct_occupe }}&nbsp;% occupé — {{ p.total }} places actives.
+        {% if p.alerte %}<strong class="fin-text-danger"> Alerte capacité.</strong>{% endif %}
+      </p>
+      <div class="fin-parking-spark"><canvas id="spark-parking-{{ p.id }}" aria-hidden="true"></canvas></div>
+    </article>
+    {% empty %}
+    <div class="fin-empty-state">
+      <i class="fas fa-square-parking"></i>
+      <p>Aucun parking universel actif. Configurez un parking de type «&nbsp;Universel&nbsp;» pour alimenter cette vue.</p>
+    </div>
+    {% endfor %}
+
+    <article class="fin-parking-card fin-parking-card--vehicules fin-metric--clickable"
+             data-type="vehicules" tabindex="0" role="button">
+      <div class="fin-parking-card-head">
+        <div class="fin-parking-icon fin-parking-icon--blue"><i class="fas fa-car-side"></i></div>
+      </div>
+      <h4 class="fin-parking-name">Présence véhiculée</h4>
+      <div class="fin-parking-stats">
+        <span class="fin-parking-big">{{ dashboard.vehicules.presents }}</span>
+        <span class="fin-parking-sub">sur site maintenant</span>
+      </div>
+      <p class="fin-parking-desc">
+        Parc enregistré : {{ dashboard.vehicules.enregistres }} véhicules de service.
+        Cliquez pour l'évolution mensuelle.
+      </p>
+      <div class="fin-parking-spark"><canvas id="spark-vehicules-detail" aria-hidden="true"></canvas></div>
+    </article>
   </div>
 </div>
 
-<div class="row mt-4">
-  <!-- 1. Zones -->
-  <div class="col-md-4">
-    <div class="card card-success card-outline">
-      <div class="card-body text-center">
-        <i class="fas fa-map-marked-alt fa-3x text-success mb-3"></i>
-        <h5 class="card-title w-100 font-weight-bold mb-2">Zones</h5>
-        <p class="card-text text-muted">Gérer les espaces physiques et sites de l'entreprise.</p>
-        <a href="{% url 'zone_liste' %}" class="btn btn-success btn-block">
-          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
-        </a>
+{{ dashboard_json|json_script:"dashboard-data" }}
+
+<div class="dash-expand-overlay" id="dash-expand-overlay" role="dialog" aria-modal="true" aria-labelledby="dash-expand-title">
+  <div class="dash-expand-panel fin-expand-panel">
+    <div class="dash-expand-header">
+      <h3 class="dash-expand-title" id="dash-expand-title">Détail</h3>
+      <div class="dash-expand-controls">
+        <label for="dash-month-select" class="mb-0 small text-muted">Mois</label>
+        <input type="month" id="dash-month-select" aria-label="Sélection du mois">
+        <button type="button" class="btn fin-btn-ghost btn-sm" id="dash-expand-close">
+          <i class="fas fa-times"></i> Fermer
+        </button>
       </div>
     </div>
-  </div>
-
-  <!-- 2. Postes -->
-  <div class="col-md-4">
-    <div class="card card-outline">
-      <div class="card-body text-center">
-        <i class="fas fa-id-badge fa-3x text-secondary mb-3"></i>
-        <h5 class="card-title w-100 font-weight-bold mb-2">Postes</h5>
-        <p class="card-text text-muted">Gérer les postes du site.</p>
-        <a href="{% url 'poste_liste' %}" class="btn btn-secondary btn-block">
-          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
-        </a>
-      </div>
+    <div class="dash-expand-chart-wrap">
+      <canvas id="dash-expand-chart"></canvas>
     </div>
-  </div>
-
-  <!-- 3. Personnel -->
-  <div class="col-md-4">
-    <div class="card card-info card-outline">
-      <div class="card-body text-center">
-        <i class="fas fa-users fa-3x text-info mb-3"></i>
-        <h5 class="card-title w-100 font-weight-bold mb-2">Personnel</h5>
-        <p class="card-text text-muted">Gérer la liste des employés (rattachés à un poste).</p>
-        <a href="{% url 'personnel_liste' %}" class="btn btn-info btn-block text-white">
-          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
-        </a>
-      </div>
+    <div class="dash-expand-events" id="dash-expand-events">
+      <p class="text-muted mb-0">Cliquez sur un point de la courbe pour afficher les entrées et sorties correspondantes.</p>
     </div>
   </div>
 </div>
+{% endblock %}
 
-<div class="row mt-4">
-  <!-- 4. Parkings -->
-  <div class="col-md-4">
-    <div class="card card-primary card-outline">
-      <div class="card-body text-center">
-        <i class="fas fa-warehouse fa-3x text-primary mb-3"></i>
-        <h5 class="card-title w-100 font-weight-bold mb-2">Parkings</h5>
-        <p class="card-text text-muted">Gérer les parkings rattachés à une zone.</p>
-        <a href="{% url 'parking_liste' %}" class="btn btn-primary btn-block">
-          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <!-- 5. Places -->
-  <div class="col-md-4">
-    <div class="card card-success card-outline">
-      <div class="card-body text-center">
-        <i class="fas fa-square-parking fa-3x text-success mb-3"></i>
-        <h5 class="card-title w-100 font-weight-bold mb-2">Places</h5>
-        <p class="card-text text-muted">Gérer les places de chaque parking.</p>
-        <a href="{% url 'placeparking_liste' %}" class="btn btn-success btn-block">
-          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <!-- 6. Véhicules -->
-  <div class="col-md-4">
-    <div class="card card-primary card-outline">
-      <div class="card-body text-center">
-        <i class="fas fa-car fa-3x text-primary mb-3"></i>
-        <h5 class="card-title w-100 font-weight-bold mb-2">Véhicules</h5>
-        <p class="card-text text-muted">Gérer le parc automobile (affecté au personnel).</p>
-        <a href="{% url 'vehicule_liste' %}" class="btn btn-primary btn-block">
-          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
-        </a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row mt-4">
-  <!-- 7. Utilisateurs -->
-  <div class="col-md-4">
-    <div class="card card-info card-outline">
-      <div class="card-body text-center">
-        <i class="fas fa-user-shield fa-3x text-info mb-3"></i>
-        <h5 class="card-title w-100 font-weight-bold mb-2">Utilisateurs</h5>
-        <p class="card-text text-muted">Gérer les comptes de l'application (administrateur, opérateur).</p>
-        <a href="{% url 'utilisateur_liste' %}" class="btn btn-info btn-block text-white">
-          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <!-- 8. Occupations -->
-  <div class="col-md-4">
-    <div class="card card-danger card-outline">
-      <div class="card-body text-center">
-        <i class="fas fa-clock fa-3x text-danger mb-3"></i>
-        <h5 class="card-title w-100 font-weight-bold mb-2">Occupations</h5>
-        <p class="card-text text-muted">Enregistrer les entrées et sorties des véhicules.</p>
-        <a href="{% url 'occupation_liste' %}" class="btn btn-danger btn-block">
-          <i class="fas fa-arrow-circle-right mr-1"></i> Accéder à la liste
-        </a>
-      </div>
-    </div>
-  </div>
-</div>
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{% static 'parc/js/dashboard.js' %}"></script>
 {% endblock %}

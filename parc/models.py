@@ -240,8 +240,8 @@ class Utilisateur(NormalisationTexteMixin, models.Model):
         Personnel,
         on_delete=models.PROTECT,
         related_name="compte_utilisateur",
-        verbose_name="Personnel véhiculé",
-        help_text="L'utilisateur doit être un membre du personnel véhiculé déjà enregistré.",
+        verbose_name="Personnel",
+        help_text="L'utilisateur doit être un membre du personnel déjà enregistré.",
     )
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -260,6 +260,18 @@ class Utilisateur(NormalisationTexteMixin, models.Model):
 
     def __str__(self):
         return f"{self.nom} {self.prenom} ({self.identifiant})"
+
+    @property
+    def nom_complet(self):
+        return f"{self.nom} {self.prenom}".strip()
+
+    @property
+    def initiales(self):
+        return "".join(
+            partie[0].upper()
+            for partie in self.nom_complet.split()
+            if partie
+        )
 
     @property
     def poste_entreprise(self):

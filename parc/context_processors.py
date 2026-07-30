@@ -1,7 +1,7 @@
 def utilisateur_connecte(request):
     """Expose le profil Utilisateur de la session courante dans les templates."""
     if not request.user.is_authenticated:
-        return {"utilisateur_connecte": None}
+        return {"utilisateur_connecte": None, "est_administrateur": False}
 
     from .models import Utilisateur
 
@@ -13,7 +13,12 @@ def utilisateur_connecte(request):
     except Utilisateur.DoesNotExist:
         profil = None
 
-    return {"utilisateur_connecte": profil}
+    return {
+        "utilisateur_connecte": profil,
+        "est_administrateur": bool(
+            profil and profil.role == Utilisateur.ROLE_ADMINISTRATEUR
+        ),
+    }
 
 
 def menu_actif(request):
@@ -37,6 +42,8 @@ def menu_actif(request):
         section = "utilisateurs"
     elif path.startswith("/occupations"):
         section = "occupations"
+    elif path.startswith("/accounts/mot-de-passe/changer"):
+        section = "profil"
     else:
         section = ""
     return {"menu_actif": section}

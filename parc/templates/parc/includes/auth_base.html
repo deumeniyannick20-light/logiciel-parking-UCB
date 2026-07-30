@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block auth_title %}Connexion{% endblock %} - UCB Parking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'parc/css/ucb-brand.css' %}">
+  <link rel="stylesheet" href="{% static 'parc/css/auth-pages.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="ucb-login-card">
+    <div class="ucb-login-brand">
+      {% include 'parc/includes/ucb_brand.html' with brand_variant='large' %}
+    </div>
+
+    {% block auth_heading %}{% endblock %}
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="ucb-login-message ucb-login-message--{{ message.tags|default:'info' }}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    {% block auth_content %}{% endblock %}
+
+    <div class="ucb-login-footer">
+      {% block auth_footer_links %}
+      <a href="{% url 'login' %}">Retour à la connexion</a>
+      &nbsp;|&nbsp;
+      <a href="https://www.ucb-cameroon.com/fr/privacy-policy" target="_blank" rel="noopener">Politique de confidentialité</a>
+      {% endblock %}
+    </div>
+  </div>
+  {% block auth_extra_js %}{% endblock %}
+</body>
+</html>

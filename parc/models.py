@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.utils import timezone
 
 from .text_format import formater_instance_texte, formater_nom_poste
@@ -56,9 +57,25 @@ class Poste(NormalisationTexteMixin, models.Model):
     def __str__(self):
         return self.nom
 
+    def est_affecte_place_reservee(self):
+        if not self.pk:
+            return False
+        return self.places_affectees.filter(
+            parking__type_parking=Parking.TYPE_RESERVE,
+        ).exists()
+
+    def synchroniser_casse_nom(self):
+        if not self.pk or not self.nom:
+            return self
+        nouveau_nom = formater_nom_poste(self.nom, self.est_affecte_place_reservee())
+        if nouveau_nom != self.nom:
+            Poste.objects.filter(pk=self.pk).update(nom=nouveau_nom)
+            self.nom = nouveau_nom
+        return self
+
     def normaliser_texte(self):
         if self.nom:
-            self.nom = formater_nom_poste(self.nom, self.est_direction)
+            self.nom = formater_nom_poste(self.nom, self.est_affecte_place_reservee())
         formater_instance_texte(self, self.champs_texte)
 
     def save(self, *args, **kwargs):
@@ -87,7 +104,10 @@ class Parking(NormalisationTexteMixin, models.Model):
         choices=TYPE_CHOICES,
         default=TYPE_UNIVERSEL,
     )
-    capacite_total = models.PositiveIntegerField(default=0)
+    capacite_total = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+    )
     actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
 
@@ -98,6 +118,13 @@ class Parking(NormalisationTexteMixin, models.Model):
 
     def __str__(self):
         return f"{self.nom} ({self.get_type_parking_display()})"
+
+    def clean(self):
+        super().clean()
+        if self.capacite_total < 1:
+            raise ValidationError(
+                {"capacite_total": "Un parking doit avoir au moins une place."}
+            )
 
     def save(self, *args, **kwargs):
         self.normaliser_texte()
@@ -164,9 +191,25 @@ class PlaceParking(NormalisationTexteMixin, models.Model):
                 )
 
     def save(self, *args, **kwargs):
+        ancien_poste_id = None
+        if self.pk:
+            ancien_poste_id = (
+                type(self).objects.filter(pk=self.pk)
+                .values_list("poste_affecte_id", flat=True)
+                .first()
+            )
         self.full_clean()
         self.normaliser_texte()
         super().save(*args, **kwargs)
+        if self.parking.type_parking != Parking.TYPE_RESERVE:
+            return
+        postes_ids = set()
+        if self.poste_affecte_id:
+            postes_ids.add(self.poste_affecte_id)
+        if ancien_poste_id:
+            postes_ids.add(ancien_poste_id)
+        for poste in Poste.objects.filter(pk__in=postes_ids):
+            poste.synchroniser_casse_nom()
 
 
 class Personnel(NormalisationTexteMixin, models.Model):
@@ -253,7 +296,7 @@ class Utilisateur(NormalisationTexteMixin, models.Model):
         verbose_name="Compte utilisateur",
         help_text="Identifiant de connexion à l'application",
     )
-    email = models.EmailField(blank=True)
+    email = models.EmailField(unique=True)
     personnel = models.OneToOneField(
         Personnel,
         on_delete=models.PROTECT,

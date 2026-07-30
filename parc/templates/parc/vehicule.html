@@ -65,6 +65,12 @@
         
         <form method="post">
           {% csrf_token %}
+          {% if mode_alerte_vehicule and personnel_vehicule_verrouille %}
+          <div class="alert alert-danger mx-3 mt-3 mb-0">
+            <i class="fas fa-exclamation-triangle mr-1"></i>
+            Enregistrez le véhicule du titulaire pré-sélectionné pour lever l'alerte.
+          </div>
+          {% endif %}
           <div class="card-body">
             {{ form.as_p }}
           </div>
@@ -83,18 +89,46 @@
 
 {% else %}
   <!-- LISTE DES VÉHICULES -->
+  <div class="{% if mode_alerte_vehicule %}ucb-alerte-mode{% endif %}" id="ucb-page-vehicules">
+  {% if mode_alerte_vehicule %}
+  <div class="ucb-alerte-bandeau" id="ucb-alerte-vehicule-bandeau">
+    <i class="fas fa-exclamation-triangle"></i>
+    <span>
+      <strong>Action requise :</strong>
+      {% if personnel_alerte %}
+        le personnel <strong>{{ personnel_alerte.nom }} {{ personnel_alerte.prenom }}</strong>
+        occupe un poste avec place réservée et doit avoir un véhicule enregistré.
+      {% else %}
+        un personnel affecté à un poste avec place réservée doit avoir un véhicule enregistré.
+      {% endif %}
+      Cliquez sur <strong>Ajouter un véhicule</strong> (bouton clignotant).
+    </span>
+  </div>
+  {% endif %}
+
   <div class="row mb-3 align-items-center">
     <div class="col-sm-6">
-      <h1 class="m-0">Liste des véhicules</h1>
+      {% include "parc/includes/liste_entete.html" %}
     </div>
     <div class="col-sm-6 text-right">
+      {% if mode_alerte_vehicule %}
+      <span class="ucb-alerte-vehicule-ring" id="ucb-ajouter-vehicule-alerte-ring">
+        <a href="{% if personnel_alerte %}{% url 'vehicule_creer' %}?personnel={{ personnel_alerte.pk }}{% else %}{% url 'vehicule_creer' %}{% endif %}"
+           class="btn btn-success ucb-alerte-autorise">
+          <i class="fas fa-plus-circle mr-1"></i> Ajouter un véhicule
+        </a>
+      </span>
+      {% else %}
       <a href="{% url 'vehicule_creer' %}" class="btn btn-success">
         <i class="fas fa-plus-circle mr-1"></i> Ajouter un véhicule
       </a>
+      {% endif %}
     </div>
   </div>
 
-  <div class="card card-primary card-outline">
+  <div class="ucb-liste-avec-recherche">
+  {% include "parc/includes/liste_recherche.html" %}
+  <div class="card card-primary card-outline" id="ucb-liste-vehicules">
     <div class="card-body p-0">
       {% if vehicules %}
         <table class="table table-striped table-hover m-0">
@@ -123,10 +157,10 @@
                   {{ vehicule.chauffeur|default:"—" }}
                 </td>
                 <td class="text-right align-middle">
-                  <a href="{% url 'vehicule_modifier' pk=vehicule.pk %}" class="btn btn-sm btn-warning mr-1">
+                  <a href="{% url 'vehicule_modifier' pk=vehicule.pk %}" class="btn btn-sm btn-warning mr-1{% if mode_alerte_vehicule %} ucb-alerte-bloque{% endif %}">
                     <i class="fas fa-edit"></i> Modifier
                   </a>
-                  <a href="{% url 'vehicule_supprimer' pk=vehicule.pk %}" class="btn btn-sm btn-danger">
+                  <a href="{% url 'vehicule_supprimer' pk=vehicule.pk %}" class="btn btn-sm btn-danger{% if mode_alerte_vehicule %} ucb-alerte-bloque{% endif %}">
                     <i class="fas fa-trash"></i> Supprimer
                   </a>
                 </td>
@@ -143,10 +177,49 @@
       {% endif %}
     </div>
     <div class="card-footer">
-      <a href="{% url 'home' %}" class="btn btn-default">
+      <a href="{% url 'home' %}" class="btn btn-default{% if mode_alerte_vehicule %} ucb-alerte-bloque{% endif %}">
         <i class="fas fa-arrow-left mr-1"></i> Retour à l'accueil
       </a>
     </div>
+  </div>
+  </div>
+
+  {% if mode_alerte_vehicule %}
+  <script>
+  (function () {
+    var modeAlerte = true;
+    var ring = document.getElementById('ucb-ajouter-vehicule-alerte-ring');
+
+    function intensifier() {
+      if (!ring) return;
+      ring.classList.remove('ucb-alerte-vehicule-intense');
+      void ring.offsetWidth;
+      ring.classList.add('ucb-alerte-vehicule-intense');
+    }
+
+    if (ring) {
+      ring.addEventListener('animationend', function (e) {
+        if (e.animationName === 'ucb-alerte-btn-bordure-intense') {
+          ring.classList.remove('ucb-alerte-vehicule-intense');
+        }
+      });
+      ring.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    document.addEventListener('click', function (e) {
+      if (!modeAlerte) return;
+      if (e.target.closest('.ucb-alerte-autorise')) return;
+      if (e.target.closest('.ucb-liste-recherche-bar')) return;
+      var link = e.target.closest('a[href]');
+      if (link) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      intensifier();
+    }, true);
+  })();
+  </script>
+  {% endif %}
   </div>
 {% endif %}
 

@@ -1,7 +1,12 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 from . import views
-from .forms import ConnexionEmailForm
+from .forms import (
+    ConnexionEmailForm,
+    NouveauMotDePasseForm,
+    ReinitialisationMotDePasseForm,
+)
+from .auth_views import ChangementMotDePasseView, deconnexion
 
 urlpatterns = [
     path(
@@ -13,7 +18,46 @@ urlpatterns = [
         ),
         name="login",
     ),
-    path("accounts/logout/", auth_views.LogoutView.as_view(next_page="login"), name="logout"),
+    path("accounts/logout/", deconnexion, name="logout"),
+    path(
+        "accounts/mot-de-passe/oublie/",
+        auth_views.PasswordResetView.as_view(
+            template_name="parc/auth/password_reset_form.html",
+            email_template_name="parc/auth/email/reinitialisation.txt",
+            subject_template_name="parc/auth/email/reinitialisation_sujet.txt",
+            form_class=ReinitialisationMotDePasseForm,
+            success_url="/accounts/mot-de-passe/oublie/envoye/",
+        ),
+        name="password_reset",
+    ),
+    path(
+        "accounts/mot-de-passe/oublie/envoye/",
+        auth_views.PasswordResetDoneView.as_view(
+            template_name="parc/auth/password_reset_done.html",
+        ),
+        name="password_reset_done",
+    ),
+    path(
+        "accounts/mot-de-passe/reinitialiser/<uidb64>/<token>/",
+        auth_views.PasswordResetConfirmView.as_view(
+            template_name="parc/auth/password_reset_confirm.html",
+            form_class=NouveauMotDePasseForm,
+            success_url="/accounts/mot-de-passe/reinitialise/",
+        ),
+        name="password_reset_confirm",
+    ),
+    path(
+        "accounts/mot-de-passe/reinitialise/",
+        auth_views.PasswordResetCompleteView.as_view(
+            template_name="parc/auth/password_reset_complete.html",
+        ),
+        name="password_reset_complete",
+    ),
+    path(
+        "accounts/mot-de-passe/changer/",
+        ChangementMotDePasseView.as_view(),
+        name="password_change",
+    ),
 
     path("", views.home, name="home"),
 

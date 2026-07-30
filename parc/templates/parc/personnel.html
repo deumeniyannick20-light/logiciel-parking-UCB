@@ -30,7 +30,32 @@
         </div>
 
         <div class="card-body">
-          <p class="lead">Êtes-vous sûr de vouloir supprimer le personnel "{{ personnel }}" ?</p>
+          <p class="lead">Êtes-vous sûr de vouloir supprimer le personnel « {{ personnel }} » ?</p>
+
+          {% if vehicules_lies %}
+            <div class="alert alert-warning mb-0 ucb-alerte-cascade">
+              <p class="mb-2">
+                <i class="fas fa-car mr-1"></i>
+                <strong>Suppression en cascade :</strong>
+                ce personnel est titulaire de {{ vehicules_lies|length }} véhicule{{ vehicules_lies|length|pluralize }}.
+                {% if vehicules_lies|length == 1 %}Il sera{% else %}Ils seront{% endif %}
+                également supprimé{{ vehicules_lies|length|pluralize }} définitivement.
+              </p>
+              <ul class="mb-0">
+                {% for vehicule in vehicules_lies %}
+                  <li>{{ vehicule }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          {% if compte_utilisateur %}
+            <div class="alert alert-warning mt-3 mb-0">
+              <i class="fas fa-user-shield mr-1"></i>
+              <strong>Compte utilisateur :</strong>
+              le compte « {{ compte_utilisateur.identifiant }} » sera également supprimé.
+            </div>
+          {% endif %}
         </div>
 
         <div class="card-footer">
@@ -85,7 +110,7 @@
   <!-- VUE LISTE DU PERSONNEL -->
   <div class="row mb-3 align-items-center">
     <div class="col-sm-6">
-      <h1 class="m-0">Liste du personnel</h1>
+      {% include "parc/includes/liste_entete.html" %}
     </div>
     <div class="col-sm-6 text-right">
       <a href="{% url 'personnel_creer' %}" class="btn btn-success">
@@ -94,6 +119,8 @@
     </div>
   </div>
 
+  <div class="ucb-liste-avec-recherche">
+  {% include "parc/includes/liste_recherche.html" %}
   <div class="card card-primary card-outline">
     <div class="card-body p-0">
       {% if personnels %}
@@ -101,7 +128,7 @@
           <thead class="thead-light">
             <tr>
               <th>Noms</th>
-              <th>Poste</th>
+              <th>poste - {{ nb_postes_distincts }} -</th>
               <th class="text-right">Actions</th>
             </tr>
           </thead>
@@ -139,6 +166,7 @@
         <i class="fas fa-arrow-left mr-1"></i> Retour à l'accueil
       </a>
     </div>
+  </div>
   </div>
 {% endif %}
 

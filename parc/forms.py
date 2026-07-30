@@ -1,5 +1,10 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+    PasswordChangeForm,
+    PasswordResetForm,
+    SetPasswordForm,
+)
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.contrib.auth import get_user_model
@@ -70,6 +75,10 @@ class FormulaireMetier(CasseTexteFormMixin, forms.ModelForm):
 
 
 class VehiculeForm(FormulaireMetier):
+    def __init__(self, *args, personnel_verrouille=None, **kwargs):
+        self.personnel_verrouille = personnel_verrouille
+        super().__init__(*args, **kwargs)
+
     class Meta:
         model = Vehicule
         fields = ["immatriculation", "marque", "modele", "couleur", "personnel", "chauffeur", "actif"]
@@ -90,6 +99,17 @@ class VehiculeForm(FormulaireMetier):
             "personnel": forms.Select(attrs={"class": "form-control"}),
             "chauffeur": forms.Select(attrs={"class": "form-control"}),
         }
+
+    def configurer_champs(self):
+        if self.personnel_verrouille:
+            self.fields["personnel"].initial = self.personnel_verrouille
+            self.fields["personnel"].disabled = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.personnel_verrouille:
+            cleaned_data["personnel"] = Personnel.objects.get(pk=self.personnel_verrouille)
+        return cleaned_data
 
 
 class PersonnelForm(FormulaireMetier):
@@ -147,7 +167,7 @@ class PosteForm(FormulaireMetier):
         model = Poste
         fields = ["nom", "description", "actif"]
         labels = {
-            "nom": "Nom du poste",
+            "nom": "Poste",
             "description": "Description",
             "actif": "Actif",
         }
@@ -180,8 +200,9 @@ class PosteForm(FormulaireMetier):
     def clean(self):
         cleaned_data = super().clean()
         nom = cleaned_data.get("nom")
+        place = cleaned_data.get("place_parking_affectee")
         if nom:
-            cleaned_data["nom"] = formater_nom_poste(nom, False)
+            cleaned_data["nom"] = formater_nom_poste(nom, bool(place))
         return cleaned_data
 
     def clean_place_parking_affectee(self):
@@ -213,6 +234,7 @@ class PosteForm(FormulaireMetier):
         if place:
             place.poste_affecte = poste
             place.save(update_fields=["poste_affecte"])
+        poste.synchroniser_casse_nom()
         return poste
 
 
@@ -233,8 +255,14 @@ class ParkingForm(FormulaireMetier):
             "zone": forms.Select(attrs={"class": "form-control"}),
             "type_parking": forms.Select(attrs={"class": "form-control"}),
             "adresse": forms.TextInput(attrs={"class": "form-control"}),
-            "capacite_total": forms.NumberInput(attrs={"class": "form-control"}),
+            "capacite_total": forms.NumberInput(attrs={"class": "form-control", "min": "1"}),
         }
+
+    def clean_capacite_total(self):
+        capacite = self.cleaned_data.get("capacite_total")
+        if capacite is not None and capacite < 1:
+            raise ValidationError("Un parking doit avoir au moins une place.")
+        return capacite
 
 
 class PlaceParkingForm(FormulaireMetier):
@@ -300,12 +328,13 @@ class PlaceParkingForm(FormulaireMetier):
                 })
         return cleaned_data
 
+
 class UtilisateurForm(FormulaireMetier):
     mot_de_passe = forms.CharField(
         label="Mot de passe",
-        required=True,
+        required=False,
         widget=forms.PasswordInput(attrs={"class": "form-control", "autocomplete": "new-password"}),
-        help_text="Le mot de passe est obligatoire pour la connexion à l'application.",
+        help_text="Obligatoire à la création. Laissez vide pour conserver le mot de passe actuel.",
     )
 
     class Meta:
@@ -349,6 +378,16 @@ class UtilisateurForm(FormulaireMetier):
             "role", "telephone", "mot_de_passe", "actif",
         ])
         self.fields["email"].required = True
+        if self.instance.pk:
+            self.fields["mot_de_passe"].required = False
+            self.fields["mot_de_passe"].help_text = (
+                "Laissez vide pour conserver le mot de passe actuel."
+            )
+        else:
+            self.fields["mot_de_passe"].required = True
+            self.fields["mot_de_passe"].help_text = (
+                "Le mot de passe est obligatoire pour la connexion à l'application."
+            )
 
     def clean_personnel(self):
         personnel = self.cleaned_data.get("personnel")
@@ -365,14 +404,19 @@ class UtilisateurForm(FormulaireMetier):
         email = self.cleaned_data.get("email", "").strip().lower()
         if not email:
             raise ValidationError("L'email est obligatoire pour la connexion à l'application.")
+        deja_utilise = Utilisateur.objects.filter(email__iexact=email)
+        if self.instance.pk:
+            deja_utilise = deja_utilise.exclude(pk=self.instance.pk)
+        if deja_utilise.exists():
+            raise ValidationError("Cet email est déjà utilisé par un autre compte.")
         return email
 
     def clean(self):
         cleaned_data = super().clean()
 
         mot_de_passe = cleaned_data.get("mot_de_passe")
-        if not mot_de_passe:
-            self.add_error("mot_de_passe", "Le mot de passe est obligatoire.")
+        if not self.instance.pk and not mot_de_passe:
+            self.add_error("mot_de_passe", "Le mot de passe est obligatoire à la création.")
 
         personnel = cleaned_data.get("personnel")
         if personnel:
@@ -404,17 +448,19 @@ class UtilisateurForm(FormulaireMetier):
             user.last_name = utilisateur.nom
             user.email = utilisateur.email
             user.is_active = utilisateur.actif
-            user.set_password(mot_de_passe)
+            if mot_de_passe:
+                user.set_password(mot_de_passe)
             user.save()
         else:
-            user = User.objects.create_user(
+            user = User(
                 username=utilisateur.identifiant,
                 email=utilisateur.email,
-                password=mot_de_passe,
                 first_name=utilisateur.prenom,
                 last_name=utilisateur.nom,
                 is_active=utilisateur.actif,
             )
+            user.set_password(mot_de_passe)
+            user.save()
             utilisateur.user = user
 
         if commit:
@@ -462,7 +508,7 @@ class ConnexionEmailForm(AuthenticationForm):
         self.fields["username"].label = "Email"
         self.fields["password"].label = "Mot de passe"
         self.fields["password"].widget.attrs.update({
-            "class": "ucb-login-input",
+            "class": "ucb-login-input ucb-password-input",
             "placeholder": "Mot de passe",
             "autocomplete": "current-password",
         })
@@ -473,3 +519,99 @@ class ConnexionEmailForm(AuthenticationForm):
 
     def clean_username(self):
         return self.cleaned_data.get("username", "").strip().lower()
+
+
+class ReinitialisationMotDePasseForm(PasswordResetForm):
+    """Réinitialisation du mot de passe via l'email du profil Utilisateur."""
+
+    email = forms.EmailField(
+        label="Email",
+        widget=forms.EmailInput(attrs={
+            "class": "ucb-login-input",
+            "placeholder": "Votre adresse email",
+            "autocomplete": "email",
+        }),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        appliquer_asterisques_obligatoires(self)
+
+    def clean_email(self):
+        return self.cleaned_data.get("email", "").strip().lower()
+
+    def get_users(self, email):
+        try:
+            utilisateur = Utilisateur.objects.select_related("user").get(
+                email__iexact=email,
+                actif=True,
+            )
+        except Utilisateur.DoesNotExist:
+            return
+
+        user = utilisateur.user
+        if user.is_active and user.has_usable_password():
+            yield user
+
+
+class NouveauMotDePasseForm(SetPasswordForm):
+    """Choix d'un nouveau mot de passe après réinitialisation."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.update({
+                "class": "ucb-login-input ucb-password-input",
+                "autocomplete": "new-password",
+            })
+            field.help_text = ""
+        self.fields["new_password1"].label = "Nouveau mot de passe"
+        self.fields["new_password2"].label = "Confirmer le mot de passe"
+        appliquer_asterisques_obligatoires(self)
+
+    def clean_new_password1(self):
+        password1 = self.cleaned_data.get("new_password1")
+        if not password1:
+            raise ValidationError("Ce champ est obligatoire.")
+        return password1
+
+    def clean_new_password2(self):
+        password1 = self.cleaned_data.get("new_password1")
+        password2 = self.cleaned_data.get("new_password2")
+        if not password2:
+            raise ValidationError("Ce champ est obligatoire.")
+        if password1 != password2:
+            raise ValidationError("Les deux mots de passe ne correspondent pas.")
+        return password2
+
+
+class ChangementMotDePasseForm(PasswordChangeForm):
+    """Changement de mot de passe pour un utilisateur connecté."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            field.widget.attrs.update({
+                "class": "form-control ucb-password-input",
+                "autocomplete": "current-password" if name == "old_password" else "new-password",
+            })
+            field.help_text = ""
+        self.fields["old_password"].label = "Mot de passe actuel"
+        self.fields["new_password1"].label = "Nouveau mot de passe"
+        self.fields["new_password2"].label = "Confirmer le nouveau mot de passe"
+        appliquer_asterisques_obligatoires(self)
+
+    def clean_new_password1(self):
+        password1 = self.cleaned_data.get("new_password1")
+        if not password1:
+            raise ValidationError("Ce champ est obligatoire.")
+        return password1
+
+    def clean_new_password2(self):
+        password1 = self.cleaned_data.get("new_password1")
+        password2 = self.cleaned_data.get("new_password2")
+        if not password2:
+            raise ValidationError("Ce champ est obligatoire.")
+        if password1 != password2:
+            raise ValidationError("Les deux mots de passe ne correspondent pas.")
+        return password2

@@ -422,7 +422,7 @@
   </style>
   {% block extra_css %}{% endblock %}
 </head>
-<body class="hold-transition sidebar-mini sidebar-no-expand layout-fixed ucb-finance-theme">
+<body class="hold-transition sidebar-mini sidebar-no-expand layout-fixed ucb-finance-theme" data-menu-actif="{{ menu_actif|default:'' }}">
 <div class="wrapper">
 
   <!-- Bandeau blanc fixe (logo UCB toujours visible) -->
@@ -488,16 +488,25 @@
               </div>
             </div>
             <div class="ucb-profil-menu-footer">
-              <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-secondary btn-block">
-                <i class="fas fa-sign-out-alt mr-1"></i> Déconnexion
+              <a href="{% url 'password_change' %}" class="btn btn-sm btn-outline-primary btn-block mb-2">
+                <i class="fas fa-key mr-1"></i> Changer mon mot de passe
               </a>
+              <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-secondary btn-block">
+                  <i class="fas fa-sign-out-alt mr-1"></i> Déconnexion
+                </button>
+              </form>
             </div>
           </div>
         </div>
         {% else %}
-        <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-secondary">
-          <i class="fas fa-sign-out-alt mr-1"></i> Déconnexion
-        </a>
+        <form method="post" action="{% url 'logout' %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-sign-out-alt mr-1"></i> Déconnexion
+          </button>
+        </form>
         {% endif %}
       </div>
     </div>
@@ -569,12 +578,14 @@
             </a>
           </li>
 
+          {% if est_administrateur %}
           <li class="nav-item">
             <a href="{% url 'utilisateur_liste' %}" class="nav-link{% if menu_actif == 'utilisateurs' %} active{% endif %}">
               <i class="nav-icon fas fa-user-shield"></i>
               <p>Gestion des utilisateurs</p>
             </a>
           </li>
+          {% endif %}
 
           <li class="nav-item">
             <a href="{% url 'occupation_liste' %}" class="nav-link{% if menu_actif == 'occupations' %} active{% endif %}">
@@ -589,13 +600,15 @@
   </aside>
 
   <!-- Zone du contenu principal -->
-  <div class="content-wrapper">
+  <div class="content-wrapper ucb-rubrique-scene">
+    <div class="ucb-rubrique-contenu" id="ucb-rubrique-contenu">
     <section class="content pt-3">
       <div class="container-fluid">
         {% block content %}
         {% endblock %}
       </div>
     </section>
+    </div>
   </div>
 
   <!-- Pied de page -->
@@ -637,12 +650,12 @@
 
     function formaterNomPoste(champ) {
       var formulaire = champ.form;
-      var estDirection = formulaire && formulaire.querySelector('[name="est_direction"]');
+      var placeAffectee = formulaire && formulaire.querySelector('[name="place_parking_affectee"]');
       var valeur = champ.value.trim();
       if (!valeur) {
         return;
       }
-      if (estDirection && estDirection.checked) {
+      if (placeAffectee && placeAffectee.value) {
         champ.value = valeur.toUpperCase();
       } else {
         champ.value = valeur.split(/\s+/).map(function (mot) {
@@ -659,7 +672,7 @@
       if (champ.type === 'email' || champ.type === 'number' || champsExclus.indexOf(champ.name) !== -1) {
         return;
       }
-      if (champ.name === 'nom' && champ.form && champ.form.querySelector('[name="est_direction"]')) {
+      if (champ.name === 'nom' && champ.form && champ.form.querySelector('[name="place_parking_affectee"]')) {
         formaterNomPoste(champ);
         return;
       }
@@ -675,7 +688,7 @@
     }, true);
 
     document.addEventListener('change', function (event) {
-      if (event.target.name !== 'est_direction') {
+      if (event.target.name !== 'place_parking_affectee') {
         return;
       }
       var formulaire = event.target.form;
@@ -919,5 +932,7 @@
   })();
 </script>
 {% block extra_js %}{% endblock %}
+<script src="{% static 'parc/js/liste-recherche.js' %}"></script>
+<script src="{% static 'parc/js/navigation-transition.js' %}"></script>
 </body>
 </html>

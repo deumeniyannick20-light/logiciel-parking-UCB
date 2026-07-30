@@ -32,10 +32,10 @@ def majuscule_mots(value):
     return " ".join(mot.capitalize() for mot in str(value).strip().split())
 
 
-def formater_nom_poste(nom, est_direction=False):
+def formater_nom_poste(nom, majuscules=False):
     if not nom:
         return nom
-    if est_direction:
+    if majuscules:
         return en_majuscules(nom)
     return majuscule_mots(nom)
 

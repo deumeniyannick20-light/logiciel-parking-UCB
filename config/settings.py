@@ -49,6 +49,7 @@ MIDDLEWARE = [
     'parc.middleware.ConnexionObligatoireMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'parc.middleware.PlaceReserveeAlerteMiddleware',
+    'parc.middleware.PersonnelVehiculeAlerteMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -129,6 +130,10 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 AUTHENTICATION_BACKENDS = [
     'parc.auth_backends.EmailAuthBackend',
 ]
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'UCB Parking <noreply@ucb-cameroon.com>'
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 
 # Static files (CSS, JavaScript, Images)

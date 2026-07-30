@@ -4,6 +4,7 @@ from django.conf import settings
 from django.shortcuts import redirect
 
 from .place_alerte import alertes_actives, url_autorisee
+from .vehicule_alerte import alertes_vehicule_actives, url_autorisee_vehicule
 
 
 class ConnexionObligatoireMiddleware:
@@ -12,6 +13,11 @@ class ConnexionObligatoireMiddleware:
     chemins_publics = (
         "/accounts/login/",
         "/accounts/logout/",
+        "/accounts/mot-de-passe/oublie/",
+        "/accounts/mot-de-passe/oublie/envoye/",
+        "/accounts/mot-de-passe/reinitialiser/",
+        "/accounts/mot-de-passe/reinitialise/",
+        "/admin/",
     )
 
     def __init__(self, get_response):
@@ -55,5 +61,33 @@ class PlaceReserveeAlerteMiddleware:
         alertes = alertes_actives(request)
         if alertes and not url_autorisee(request.path, alertes):
             return redirect("placeparking_liste")
+
+        return self.get_response(request)
+
+
+class PersonnelVehiculeAlerteMiddleware:
+    """
+    Force l'enregistrement d'un véhicule pour le personnel affecté
+    à un poste disposant d'une place réservée.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if not request.user.is_authenticated:
+            return self.get_response(request)
+
+        path = request.path
+        static_url = getattr(settings, "STATIC_URL", "/static/")
+        if path.startswith(static_url):
+            return self.get_response(request)
+
+        if alertes_actives(request):
+            return self.get_response(request)
+
+        alertes = alertes_vehicule_actives(request)
+        if alertes and not url_autorisee_vehicule(request.path, alertes):
+            return redirect("vehicule_liste")
 
         return self.get_response(request)

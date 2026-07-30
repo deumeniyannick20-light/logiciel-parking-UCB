@@ -85,7 +85,7 @@
   <!-- VUE LISTE UTILISATEURS -->
   <div class="row mb-3 align-items-center">
     <div class="col-sm-6">
-      <h1 class="m-0">Liste des utilisateurs</h1>
+      {% include "parc/includes/liste_entete.html" %}
     </div>
     <div class="col-sm-6 text-right">
       <a href="{% url 'utilisateur_creer' %}" class="btn btn-success">
@@ -94,6 +94,8 @@
     </div>
   </div>
 
+  <div class="ucb-liste-avec-recherche">
+  {% include "parc/includes/liste_recherche.html" %}
   <div class="card card-primary card-outline">
     <div class="card-body p-0">
       {% if utilisateurs %}
@@ -102,7 +104,7 @@
             <tr>
               <th>Noms</th>
               <th>Email</th>
-              <th>Poste</th>
+              <th>poste - {{ nb_postes_distincts }} -</th>
               <th>Rôle</th>
               <th>Téléphone</th>
               <th>Statut</th>
@@ -159,6 +161,7 @@
         <i class="fas fa-arrow-left mr-1"></i> Retour à l'accueil
       </a>
     </div>
+  </div>
   </div>
 {% endif %}
 

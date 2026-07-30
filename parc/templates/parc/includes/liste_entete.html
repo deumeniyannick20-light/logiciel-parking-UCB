@@ -1,0 +1,8 @@
+<h1 class="m-0">
+  {{ liste_titre }} ({{ liste_total }})
+  {% if liste_signal == 'up' %}
+    <i class="fas fa-arrow-up ucb-liste-signal ucb-liste-signal--up" title="Élément ajouté" aria-label="Élément ajouté"></i>
+  {% elif liste_signal == 'down' %}
+    <i class="fas fa-arrow-down ucb-liste-signal ucb-liste-signal--down" title="Élément supprimé" aria-label="Élément supprimé"></i>
+  {% endif %}
+</h1>

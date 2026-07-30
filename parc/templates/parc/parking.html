@@ -85,7 +85,7 @@
   <!-- VUE LISTE DES PARKINGS -->
   <div class="row mb-3 align-items-center">
     <div class="col-sm-6">
-      <h1 class="m-0">Liste des parkings</h1>
+      {% include "parc/includes/liste_entete.html" %}
     </div>
     <div class="col-sm-6 text-right">
       <a href="{% url 'parking_creer' %}" class="btn btn-success">
@@ -94,6 +94,8 @@
     </div>
   </div>
 
+  <div class="ucb-liste-avec-recherche">
+  {% include "parc/includes/liste_recherche.html" %}
   <div class="card card-primary card-outline">  
     <div class="card-body p-0">
       {% if parkings %}
@@ -120,7 +122,11 @@
                     {{ parking.zone }}
                   </td>
                   <td class="align-middle">
-                    {{ parking.get_type_parking_display }}
+                    {% if parking.type_parking == 'universel' %}
+                      Universel
+                    {% else %}
+                      Réservé
+                    {% endif %}
                   </td>
                   <td class="align-middle">
                     {{ parking.adresse|default:"Non renseignée" }}
@@ -162,6 +168,7 @@
         <i class="fas fa-arrow-left mr-1"></i> Tableau de bord
       </a>
     </div>
+  </div>
   </div>
 {% endif %}
 

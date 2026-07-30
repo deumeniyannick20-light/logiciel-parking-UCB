@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Case, Count, Q, Value, When
+from django.db import transaction
+from django.db.models import Case, Q, Value, When
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET
@@ -23,6 +24,14 @@ from .dashboard_stats import (
     serie_mensuelle,
 )
 from .place_alerte import alertes_actives, enregistrer_alertes, resoudre_alerte
+from .liste_signaux import contexte_liste, redirect_liste
+from .vehicule_alerte import (
+    alertes_vehicule_actives,
+    enregistrer_alerte_vehicule,
+    personnel_exige_vehicule,
+    resoudre_alerte_vehicule,
+)
+from .decorators import administrateur_requis
 
 
 @login_required
@@ -67,22 +76,51 @@ def api_dashboard_parking(request, pk):
 # -------------------- VEHICULES --------------------
 @login_required
 def vehicule_liste(request):
-    vehicules = Vehicule.objects.all().order_by("id")
-    return render(request, "parc/vehicule.html", {"vehicules": vehicules})
+    vehicules = Vehicule.objects.select_related("personnel", "chauffeur").order_by("id")
+    alertes = alertes_vehicule_actives(request)
+    personnel_alerte = None
+    if alertes:
+        personnel_alerte = Personnel.objects.filter(pk=alertes[0]).first()
+    return render(request, "parc/vehicule.html", {
+        "vehicules": vehicules,
+        "mode_alerte_vehicule": bool(alertes),
+        "personnel_alerte": personnel_alerte,
+        "liste_titre": "Liste des véhicules",
+        **contexte_liste(request, "vehicules", vehicules),
+    })
 
 
 @login_required
 def vehicule_creer(request):
-    if request.method == "POST":
-        form = VehiculeForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Véhicule créé avec succès.")
-            return redirect("vehicule_liste")
-    else:
-        form = VehiculeForm()
+    alertes = set(alertes_vehicule_actives(request))
+    personnel_verrouille = None
+    personnel_pk = request.GET.get("personnel")
+    if personnel_pk:
+        try:
+            pk = int(personnel_pk)
+            if not alertes or pk in alertes:
+                personnel_verrouille = pk
+        except (TypeError, ValueError):
+            pass
+    elif alertes:
+        personnel_verrouille = sorted(alertes)[0]
 
-    return render(request, "parc/vehicule.html", {"form": form, "titre": "Ajouter un véhicule"})
+    if request.method == "POST":
+        form = VehiculeForm(request.POST, personnel_verrouille=personnel_verrouille)
+        if form.is_valid():
+            vehicule = form.save()
+            resoudre_alerte_vehicule(request, vehicule.personnel_id)
+            messages.success(request, "Véhicule créé avec succès.")
+            return redirect_liste(request, "vehicule_liste", "vehicules", "ajout")
+    else:
+        form = VehiculeForm(personnel_verrouille=personnel_verrouille)
+
+    return render(request, "parc/vehicule.html", {
+        "form": form,
+        "titre": "Ajouter un véhicule",
+        "mode_alerte_vehicule": bool(alertes),
+        "personnel_vehicule_verrouille": personnel_verrouille,
+    })
 
 
 @login_required
@@ -106,7 +144,7 @@ def vehicule_supprimer(request, pk):
     if request.method == "POST":
         vehicule.delete()
         messages.success(request, "Véhicule supprimé avec succès.")
-        return redirect("vehicule_liste")
+        return redirect_liste(request, "vehicule_liste", "vehicules", "suppression")
 
     return render(request, "parc/vehicule.html", {"action": "delete", "vehicule": vehicule})
 
@@ -114,8 +152,14 @@ def vehicule_supprimer(request, pk):
 # -------------------- PERSONNELS --------------------
 @login_required
 def personnel_liste(request):
-    personnels = Personnel.objects.all().order_by("nom", "prenom")
-    return render(request, "parc/personnel.html", {"personnels": personnels})
+    personnels = Personnel.objects.select_related("poste_obj").order_by("nom", "prenom")
+    nb_postes_distincts = personnels.values("poste_obj_id").distinct().count()
+    return render(request, "parc/personnel.html", {
+        "personnels": personnels,
+        "nb_postes_distincts": nb_postes_distincts,
+        "liste_titre": "Liste du personnel",
+        **contexte_liste(request, "personnels", personnels),
+    })
 
 
 @login_required
@@ -123,9 +167,17 @@ def personnel_creer(request):
     if request.method == "POST":
         form = PersonnelForm(request.POST)
         if form.is_valid():
-            form.save()
+            personnel = form.save()
+            if personnel_exige_vehicule(personnel):
+                enregistrer_alerte_vehicule(request, personnel.pk)
+                messages.warning(
+                    request,
+                    "Ce personnel occupe un poste avec place réservée : "
+                    "enregistrez son véhicule pour continuer.",
+                )
+                return redirect("vehicule_liste")
             messages.success(request, "Personnel créé avec succès.")
-            return redirect("personnel_liste")
+            return redirect_liste(request, "personnel_liste", "personnels", "ajout")
     else:
         form = PersonnelForm()
 
@@ -138,7 +190,16 @@ def personnel_modifier(request, pk):
     if request.method == "POST":
         form = PersonnelForm(request.POST, instance=personnel)
         if form.is_valid():
-            form.save()
+            personnel = form.save()
+            if personnel_exige_vehicule(personnel):
+                enregistrer_alerte_vehicule(request, personnel.pk)
+                messages.warning(
+                    request,
+                    "Ce personnel occupe un poste avec place réservée : "
+                    "enregistrez son véhicule pour continuer.",
+                )
+                return redirect("vehicule_liste")
+            resoudre_alerte_vehicule(request, personnel.pk)
             messages.success(request, "Personnel modifié avec succès.")
             return redirect("personnel_liste")
     else:
@@ -147,22 +208,76 @@ def personnel_modifier(request, pk):
     return render(request, "parc/personnel.html", {"form": form, "titre": "Modifier un personnel"})
 
 
+def _liberer_et_supprimer_occupations_vehicule(vehicule):
+    places_a_verifier = set()
+    for occupation in Occupation.objects.filter(vehicule=vehicule):
+        if occupation.date_sortie is None:
+            places_a_verifier.add(occupation.place_parking_id)
+        occupation.delete()
+    for place_id in places_a_verifier:
+        place = PlaceParking.objects.get(pk=place_id)
+        if not place.occupations.filter(date_sortie__isnull=True).exists():
+            place.statut = PlaceParking.STATUT_LIBRE
+            place.save(update_fields=["statut"])
+
+
+def _supprimer_personnel_et_dependances(personnel):
+    vehicules = list(personnel.vehicules.all())
+    for vehicule in vehicules:
+        _liberer_et_supprimer_occupations_vehicule(vehicule)
+        vehicule.delete()
+
+    compte = Utilisateur.objects.filter(personnel_id=personnel.pk).first()
+    if compte:
+        compte.delete()
+
+    personnel_pk = personnel.pk
+    personnel.delete()
+    return vehicules, compte is not None, personnel_pk
+
+
 @login_required
 def personnel_supprimer(request, pk):
     personnel = get_object_or_404(Personnel, pk=pk)
-    if request.method == "POST":
-        personnel.delete()
-        messages.success(request, "Personnel supprimé avec succès.")
-        return redirect("personnel_liste")
+    vehicules = list(personnel.vehicules.all())
+    compte_utilisateur = Utilisateur.objects.filter(personnel_id=personnel.pk).first()
 
-    return render(request, "parc/personnel.html", {"action": "delete", "personnel": personnel})
+    if request.method == "POST":
+        with transaction.atomic():
+            vehicules_supprimes, compte_supprime, personnel_pk = _supprimer_personnel_et_dependances(personnel)
+        resoudre_alerte_vehicule(request, personnel_pk)
+        if vehicules_supprimes:
+            messages.success(
+                request,
+                f"Personnel supprimé avec succès. "
+                f"{len(vehicules_supprimes)} véhicule(s) associé(s) ont également été supprimé(s).",
+            )
+        elif compte_supprime:
+            messages.success(
+                request,
+                "Personnel supprimé avec succès. Le compte utilisateur associé a également été supprimé.",
+            )
+        else:
+            messages.success(request, "Personnel supprimé avec succès.")
+        return redirect_liste(request, "personnel_liste", "personnels", "suppression")
+
+    return render(request, "parc/personnel.html", {
+        "action": "delete",
+        "personnel": personnel,
+        "vehicules_lies": vehicules,
+        "compte_utilisateur": compte_utilisateur,
+    })
 
 
 # -------------------- ZONES --------------------
 @login_required
 def zone_liste(request):
-    zones = Zone.objects.all().order_by("nom")
-    return render(request, "parc/zone.html", {"zones": zones})
+    zones = Zone.objects.all().order_by("-superficie", "nom")
+    return render(request, "parc/zone.html", {
+        "zones": zones,
+        "liste_titre": "Liste des zones",
+        **contexte_liste(request, "zones", zones),
+    })
 
 
 @login_required
@@ -172,7 +287,7 @@ def zone_creer(request):
         if form.is_valid():
             form.save()
             messages.success(request, "Zone créée avec succès.")
-            return redirect("zone_liste")
+            return redirect_liste(request, "zone_liste", "zones", "ajout")
     else:
         form = ZoneForm()
 
@@ -200,7 +315,7 @@ def zone_supprimer(request, pk):
     if request.method == "POST":
         zone.delete()
         messages.success(request, "Zone supprimée avec succès.")
-        return redirect("zone_liste")
+        return redirect_liste(request, "zone_liste", "zones", "suppression")
 
     return render(request, "parc/zone.html", {"action": "delete", "zone": zone})
 
@@ -211,7 +326,11 @@ def poste_liste(request):
     postes = Poste.objects.prefetch_related(
         "places_affectees__parking"
     ).order_by("nom")
-    return render(request, "parc/poste.html", {"postes": postes})
+    return render(request, "parc/poste.html", {
+        "postes": postes,
+        "liste_titre": "Liste des postes",
+        **contexte_liste(request, "postes", postes),
+    })
 
 
 @login_required
@@ -221,7 +340,7 @@ def poste_creer(request):
         if form.is_valid():
             form.save()
             messages.success(request, "Poste créé avec succès.")
-            return redirect("poste_liste")
+            return redirect_liste(request, "poste_liste", "postes", "ajout")
     else:
         form = PosteForm()
 
@@ -272,7 +391,7 @@ def poste_supprimer(request, pk):
             )
             return redirect("placeparking_liste")
         messages.success(request, "Poste supprimé avec succès.")
-        return redirect("poste_liste")
+        return redirect_liste(request, "poste_liste", "postes", "suppression")
 
     return render(request, "parc/poste.html", {"action": "delete", "poste": poste})
 
@@ -280,24 +399,27 @@ def poste_supprimer(request, pk):
 # -------------------- PARKINGS --------------------
 @login_required
 def parking_liste(request):
+    # Classement hiérarchique (liste des parkings uniquement) :
+    # 1. zone BASSA avant les autres zones
+    # 1.1. au sein d'une même zone : plus de places d'abord
+    # 1.1.1. à zone et capacité égales : ordre alphabétique du nom
     parkings = (
         Parking.objects.select_related("zone")
-        .annotate(nb_places=Count("places"))
         .order_by(
             Case(
                 When(zone__nom__iexact="bassa", then=Value(0)),
                 default=Value(1),
             ),
-            "-nb_places",
-            Case(
-                When(type_parking=Parking.TYPE_UNIVERSEL, then=Value(0)),
-                When(type_parking=Parking.TYPE_RESERVE, then=Value(1)),
-                default=Value(2),
-            ),
+            "zone__nom",
+            "-capacite_total",
             "nom",
         )
     )
-    return render(request, "parc/parking.html", {"parkings": parkings})
+    return render(request, "parc/parking.html", {
+        "parkings": parkings,
+        "liste_titre": "Liste des parkings",
+        **contexte_liste(request, "parkings", parkings),
+    })
 
 
 @login_required
@@ -307,7 +429,7 @@ def parking_creer(request):
         if form.is_valid():
             form.save()
             messages.success(request, "Parking créé avec succès.")
-            return redirect("parking_liste")
+            return redirect_liste(request, "parking_liste", "parkings", "ajout")
     else:
         form = ParkingForm()
 
@@ -335,7 +457,7 @@ def parking_supprimer(request, pk):
     if request.method == "POST":
         parking.delete()
         messages.success(request, "Parking supprimé avec succès.")
-        return redirect("parking_liste")
+        return redirect_liste(request, "parking_liste", "parkings", "suppression")
 
     return render(request, "parc/parking.html", {"action": "delete", "item": parking})
 
@@ -351,6 +473,8 @@ def placeparking_liste(request):
         "places": places,
         "places_alerte": places_alerte,
         "mode_alerte_places": bool(places_alerte),
+        "liste_titre": "Liste des places de parking",
+        **contexte_liste(request, "places", places),
     })
 
 
@@ -361,7 +485,7 @@ def placeparking_creer(request):
         if form.is_valid():
             form.save()
             messages.success(request, "Place de parking créée avec succès.")
-            return redirect("placeparking_liste")
+            return redirect_liste(request, "placeparking_liste", "places", "ajout")
     else:
         form = PlaceParkingForm()
 
@@ -400,35 +524,41 @@ def placeparking_supprimer(request, pk):
     if request.method == "POST":
         place.delete()
         messages.success(request, "Place de parking supprimée avec succès.")
-        return redirect("placeparking_liste")
+        return redirect_liste(request, "placeparking_liste", "places", "suppression")
 
     return render(request, "parc/placeparking.html", {"action": "delete", "item": place})
 
 
 # -------------------- UTILISATEURS --------------------
-@login_required
+@administrateur_requis
 def utilisateur_liste(request):
     utilisateurs = Utilisateur.objects.select_related(
         "personnel__poste_obj"
     ).order_by("nom", "prenom")
-    return render(request, "parc/utilisateur.html", {"utilisateurs": utilisateurs})
+    nb_postes_distincts = utilisateurs.values("personnel__poste_obj_id").distinct().count()
+    return render(request, "parc/utilisateur.html", {
+        "utilisateurs": utilisateurs,
+        "nb_postes_distincts": nb_postes_distincts,
+        "liste_titre": "Liste des utilisateurs",
+        **contexte_liste(request, "utilisateurs", utilisateurs),
+    })
 
 
-@login_required
+@administrateur_requis
 def utilisateur_creer(request):
     if request.method == "POST":
         form = UtilisateurForm(request.POST)
         if form.is_valid():
             form.save()
             messages.success(request, "Utilisateur créé avec succès.")
-            return redirect("utilisateur_liste")
+            return redirect_liste(request, "utilisateur_liste", "utilisateurs", "ajout")
     else:
         form = UtilisateurForm()
 
     return render(request, "parc/utilisateur.html", {"form": form, "title": "Ajouter un utilisateur"})
 
 
-@login_required
+@administrateur_requis
 def utilisateur_modifier(request, pk):
     utilisateur = get_object_or_404(Utilisateur, pk=pk)
     if request.method == "POST":
@@ -443,13 +573,13 @@ def utilisateur_modifier(request, pk):
     return render(request, "parc/utilisateur.html", {"form": form, "title": "Modifier un utilisateur"})
 
 
-@login_required
+@administrateur_requis
 def utilisateur_supprimer(request, pk):
     utilisateur = get_object_or_404(Utilisateur, pk=pk)
     if request.method == "POST":
         utilisateur.delete()
         messages.success(request, "Utilisateur supprimé avec succès.")
-        return redirect("utilisateur_liste")
+        return redirect_liste(request, "utilisateur_liste", "utilisateurs", "suppression")
 
     return render(request, "parc/utilisateur.html", {"action": "delete", "item": utilisateur})
 
@@ -460,7 +590,11 @@ def occupation_liste(request):
     occupations = Occupation.objects.select_related(
         "vehicule", "place_parking", "utilisateur"
     ).order_by("-date_entree")
-    return render(request, "parc/occupation.html", {"occupations": occupations})
+    return render(request, "parc/occupation.html", {
+        "occupations": occupations,
+        "liste_titre": "Liste des occupations",
+        **contexte_liste(request, "occupations", occupations),
+    })
 
 
 @login_required
@@ -474,7 +608,7 @@ def occupation_creer(request):
             occupation.full_clean()
             occupation.save()
             messages.success(request, "Entrée enregistrée avec succès.")
-            return redirect("occupation_liste")
+            return redirect_liste(request, "occupation_liste", "occupations", "ajout")
     else:
         form = OccupationEntreeForm()
 
@@ -547,6 +681,6 @@ def occupation_supprimer(request, pk):
                 place.statut = PlaceParking.STATUT_LIBRE
                 place.save(update_fields=["statut"])
         messages.success(request, "Occupation supprimée avec succès.")
-        return redirect("occupation_liste")
+        return redirect_liste(request, "occupation_liste", "occupations", "suppression")
 
     return render(request, "parc/occupation.html", {"action": "delete", "item": occupation})

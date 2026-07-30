@@ -1,224 +1,66 @@
+{% extends "parc/includes/auth_base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Connexion - UCB Parking</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'parc/css/ucb-brand.css' %}">
-  <style>
-    * {
-      box-sizing: border-box;
-    }
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: "Source Sans Pro", Arial, sans-serif;
-      background-color: #d71920;
-      background-image:
-        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px),
-        radial-gradient(circle at 80% 40%, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Ccircle cx='52' cy='18' r='2.5'/%3E%3Ccircle cx='28' cy='42' r='2'/%3E%3Ccircle cx='64' cy='56' r='3'/%3E%3Cpath d='M8 58h10v8H8zM44 8h8v12h-8zM58 34h10v6H58z'/%3E%3C/g%3E%3C/svg%3E");
-      background-size: auto, auto, 80px 80px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px 16px;
-    }
+{% block auth_title %}Connexion{% endblock %}
 
-    .ucb-login-card {
-      width: 100%;
-      max-width: 560px;
-      background: #ffffff;
-      border-radius: 6px;
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
-      padding: 34px 42px 28px;
-    }
+{% block auth_heading %}
+  <h1 class="ucb-login-title">
+    Bienvenue sur l'application de gestion de la flotte automobile UCB
+  </h1>
+  <p class="ucb-login-intro">
+    Quelles sont vos informations de connexion ?<br>
+    Pour accéder à l'application, veuillez vous identifier.
+  </p>
+{% endblock %}
 
-    .ucb-login-brand {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-bottom: 28px;
-    }
-
-    .ucb-login-title {
-      text-align: center;
-      font-size: 1.35rem;
-      font-weight: 700;
-      line-height: 1.35;
-      color: #111111;
-      text-transform: uppercase;
-      margin: 0 0 18px;
-    }
-
-    .ucb-login-intro {
-      text-align: center;
-      color: #666666;
-      font-size: 1rem;
-      line-height: 1.5;
-      margin: 0 0 24px;
-    }
-
-    .ucb-login-field {
-      margin-bottom: 14px;
-    }
-
-    .ucb-login-field label {
-      display: block;
-      font-weight: 600;
-      color: #333333;
-      margin-bottom: 6px;
-      font-size: 0.95rem;
-    }
-
-    .ucb-login-input {
-      width: 100%;
-      height: 46px;
-      border: 1px solid #d5d5d5;
-      border-radius: 4px;
-      padding: 0 14px;
-      font-size: 1rem;
-      color: #222222;
-      background: #ffffff;
-      outline: none;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .ucb-login-input:focus {
-      border-color: #d71920;
-      box-shadow: 0 0 0 3px rgba(215, 25, 32, 0.12);
-    }
-
-    .ucb-login-errors {
-      background: #fff5f5;
-      border: 1px solid #f5c2c7;
-      color: #b02a37;
-      border-radius: 4px;
-      padding: 12px 14px;
-      margin-bottom: 16px;
-      font-size: 0.95rem;
-    }
-
-    .ucb-login-errors ul {
-      margin: 0;
-      padding-left: 18px;
-    }
-
-    .ucb-login-submit {
-      width: 100%;
-      height: 50px;
-      margin-top: 8px;
-      border: none;
-      border-radius: 4px;
-      background: #d71920;
-      color: #ffffff;
-      font-size: 1.05rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background-color 0.2s ease, transform 0.1s ease;
-    }
-
-    .ucb-login-submit:hover {
-      background: #b9151b;
-    }
-
-    .ucb-login-submit:active {
-      transform: translateY(1px);
-    }
-
-    .ucb-login-footer {
-      margin-top: 22px;
-      text-align: center;
-      font-size: 0.82rem;
-      color: #888888;
-    }
-
-    .ucb-login-footer a {
-      color: #2f6fed;
-      text-decoration: none;
-    }
-
-    .ucb-login-footer a:hover {
-      text-decoration: underline;
-    }
-
-    @media (max-width: 480px) {
-      .ucb-login-card {
-        padding: 24px 20px 20px;
-      }
-
-      .ucb-login-brand img {
-        width: min(100%, 320px);
-      }
-
-      .ucb-login-title {
-        font-size: 1.1rem;
-      }
-    }
-  </style>
-</head>
-<body>
-
-  <div class="ucb-login-card">
-    <div class="ucb-login-brand">
-      {% include 'parc/includes/ucb_brand.html' with brand_variant='large' %}
+{% block auth_content %}
+  {% if form.non_field_errors %}
+    <div class="ucb-login-errors">
+      {{ form.non_field_errors }}
     </div>
+  {% endif %}
 
-    <h1 class="ucb-login-title">
-      Bienvenue sur l'application de gestion de la flotte automobile UCB
-    </h1>
-
-    <p class="ucb-login-intro">
-      Quelles sont vos informations de connexion ?<br>
-      Pour accéder à l'application, veuillez vous identifier.
-    </p>
-
-    {% if form.non_field_errors %}
-      <div class="ucb-login-errors">
-        {{ form.non_field_errors }}
-      </div>
+  <form method="post" action="">
+    {% csrf_token %}
+    {% if next %}
+      <input type="hidden" name="next" value="{{ next }}">
     {% endif %}
 
-    <form method="post" action="">
-      {% csrf_token %}
-      {% if next %}
-        <input type="hidden" name="next" value="{{ next }}">
+    <div class="ucb-login-field">
+      <label for="{{ form.username.id_for_label }}">Email</label>
+      {{ form.username }}
+      {% if form.username.errors %}
+        <div class="ucb-login-errors" style="margin-top:8px;margin-bottom:0;">
+          {{ form.username.errors }}
+        </div>
       {% endif %}
-
-      <div class="ucb-login-field">
-        <label for="{{ form.username.id_for_label }}">Email</label>
-        {{ form.username }}
-        {% if form.username.errors %}
-          <div class="ucb-login-errors" style="margin-top:8px;margin-bottom:0;">
-            {{ form.username.errors }}
-          </div>
-        {% endif %}
-      </div>
-
-      <div class="ucb-login-field">
-        <label for="{{ form.password.id_for_label }}">Mot de passe</label>
-        {{ form.password }}
-        {% if form.password.errors %}
-          <div class="ucb-login-errors" style="margin-top:8px;margin-bottom:0;">
-            {{ form.password.errors }}
-          </div>
-        {% endif %}
-      </div>
-
-      <button type="submit" class="ucb-login-submit">Se connecter</button>
-    </form>
-
-    <div class="ucb-login-footer">
-      <a href="https://www.ucb-cameroon.com/fr/privacy-policy" target="_blank" rel="noopener">Politique de confidentialité</a>
-      &nbsp;|&nbsp;
-      <a href="https://www.ucb-cameroon.com/fr/cookie-policy" target="_blank" rel="noopener">Politique des cookies</a>
     </div>
-  </div>
 
-</body>
-</html>
+    <div class="ucb-login-field">
+      <label for="{{ form.password.id_for_label }}">Mot de passe</label>
+      <div class="ucb-password-field">
+        {{ form.password }}
+        {% include "parc/includes/bouton_voir_mot_de_passe.html" %}
+      </div>
+      {% if form.password.errors %}
+        <div class="ucb-login-errors" style="margin-top:8px;margin-bottom:0;">
+          {{ form.password.errors }}
+        </div>
+      {% endif %}
+    </div>
+
+    <button type="submit" class="ucb-login-submit">Se connecter</button>
+  </form>
+
+  <a href="{% url 'password_reset' %}" class="ucb-login-link">Mot de passe oublié ?</a>
+{% endblock %}
+
+{% block auth_extra_js %}
+  <script src="{% static 'parc/js/password-toggle.js' %}"></script>
+{% endblock %}
+
+{% block auth_footer_links %}
+  <a href="https://www.ucb-cameroon.com/fr/privacy-policy" target="_blank" rel="noopener">Politique de confidentialité</a>
+  &nbsp;|&nbsp;
+  <a href="https://www.ucb-cameroon.com/fr/cookie-policy" target="_blank" rel="noopener">Politique des cookies</a>
+{% endblock %}

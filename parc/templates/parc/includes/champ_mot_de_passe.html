@@ -1,0 +1,13 @@
+<div class="form-group">
+  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+  <div class="ucb-password-field">
+    {{ field }}
+    {% include "parc/includes/bouton_voir_mot_de_passe.html" %}
+  </div>
+  {% if field.errors %}
+    <div class="text-danger small mt-1">{{ field.errors }}</div>
+  {% endif %}
+  {% if field.help_text %}
+    <small class="form-text text-muted">{{ field.help_text|safe }}</small>
+  {% endif %}
+</div>

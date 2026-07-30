@@ -1246,6 +1246,301 @@ tr.place-alerte-sans-poste.place-alerte-intense {
   opacity: 0.45;
 }
 
+@keyframes ucb-alerte-btn-bordure {
+  0%, 100% {
+    box-shadow: 0 0 0 1.5px #ff2d55, 0 0 8px rgba(255, 45, 85, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 2.5px #ff5c75, 0 0 14px rgba(255, 45, 85, 0.8);
+  }
+}
+
+@keyframes ucb-alerte-btn-bordure-intense {
+  0%, 100% {
+    box-shadow: 0 0 0 2px #ff2d55, 0 0 12px rgba(255, 45, 85, 0.75);
+  }
+  50% {
+    box-shadow: 0 0 0 3.5px #ff1744, 0 0 20px rgba(255, 23, 68, 0.9);
+  }
+}
+
+body.ucb-finance-theme .ucb-alerte-vehicule-ring {
+  display: inline-block;
+  border-radius: 10px;
+  padding: 1px;
+  animation: ucb-alerte-btn-bordure 1s ease-in-out infinite;
+  position: relative;
+  z-index: 5;
+}
+
+body.ucb-finance-theme .ucb-alerte-vehicule-ring.ucb-alerte-vehicule-intense {
+  animation: ucb-alerte-btn-bordure-intense 0.35s ease-in-out 4;
+}
+
+/* ── Alerte suppression en cascade (véhicules) ── */
+@keyframes ucb-alerte-bordure-jaune {
+  0%, 100% {
+    border-color: #ffc107;
+    box-shadow: inset 0 0 0 1.5px #ffc107, 0 0 10px rgba(255, 193, 7, 0.45);
+  }
+  50% {
+    border-color: #ffeb3b;
+    box-shadow: inset 0 0 0 2.5px #ffeb3b, 0 0 20px rgba(255, 235, 59, 0.85);
+  }
+}
+
+body.ucb-finance-theme .ucb-alerte-cascade {
+  border: 2px solid #ffc107 !important;
+  border-radius: 10px;
+  animation: ucb-alerte-bordure-jaune 1.1s ease-in-out infinite;
+}
+
+/* ── Liste places : nom parking regroupé ── */
+body.ucb-finance-theme .ucb-place-parking-groupe {
+  vertical-align: middle !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* ── Champ mot de passe avec affichage ── */
+body.ucb-finance-theme .ucb-password-field {
+  position: relative;
+}
+
+body.ucb-finance-theme .ucb-password-field .form-control {
+  padding-right: 3rem;
+}
+
+body.ucb-finance-theme .ucb-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  z-index: 3;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.25);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  padding: 0;
+}
+
+body.ucb-finance-theme .ucb-password-toggle:hover {
+  color: #ffffff;
+  border-color: #5b9fff;
+  background: rgba(91, 159, 255, 0.2);
+}
+
+body.ucb-finance-theme .content h1.m-0 .ucb-liste-signal {
+  font-size: 0.85em;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+  animation: ucb-liste-signal-apparition 0.35s ease-out;
+}
+
+body.ucb-finance-theme .content h1.m-0 .ucb-liste-signal--up {
+  color: #3b82f6 !important;
+}
+
+body.ucb-finance-theme .content h1.m-0 .ucb-liste-signal--down {
+  color: #ef4444 !important;
+}
+
+@keyframes ucb-liste-signal-apparition {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Transition verticale entre rubriques ── */
+body.ucb-finance-theme .content-wrapper.ucb-rubrique-scene {
+  overflow: hidden;
+}
+
+body.ucb-finance-theme .ucb-rubrique-contenu {
+  min-height: 100%;
+  will-change: transform, clip-path, opacity;
+}
+
+body.ucb-finance-theme .ucb-rubrique-contenu.ucb-rubrique-anim-montant {
+  animation: ucb-balayage-montant 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+body.ucb-finance-theme .ucb-rubrique-contenu.ucb-rubrique-anim-descendant {
+  animation: ucb-balayage-descendant 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes ucb-balayage-montant {
+  from {
+    opacity: 0.25;
+    transform: translateY(32px);
+    clip-path: inset(100% 0 0 0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes ucb-balayage-descendant {
+  from {
+    opacity: 0.25;
+    transform: translateY(-32px);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.ucb-finance-theme .ucb-rubrique-contenu.ucb-rubrique-anim-montant,
+  body.ucb-finance-theme .ucb-rubrique-contenu.ucb-rubrique-anim-descendant {
+    animation: none;
+  }
+}
+
+/* ── Recherche instantanée dans les listes ── */
+.ucb-liste-recherche-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.ucb-liste-recherche-loupe {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(30, 41, 59, 0.65);
+  color: #93c5fd;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.ucb-liste-recherche-loupe:hover,
+.ucb-liste-recherche-loupe:focus {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.55);
+  color: #bfdbfe;
+  outline: none;
+}
+
+.ucb-liste-recherche-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.ucb-liste-recherche-panel--ferme {
+  display: none;
+}
+
+.ucb-liste-recherche-champ {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  padding: 0.45rem 0.65rem;
+}
+
+.ucb-liste-recherche-icone {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.ucb-liste-recherche-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.ucb-liste-recherche-input::placeholder {
+  color: #64748b;
+}
+
+.ucb-liste-recherche-fermer {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.15rem;
+}
+
+.ucb-liste-recherche-fermer:hover {
+  color: #e2e8f0;
+}
+
+.ucb-liste-recherche-suggestions {
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 10px;
+  overflow: hidden;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.ucb-liste-recherche-suggestion {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: #e2e8f0;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.ucb-liste-recherche-suggestion:hover,
+.ucb-liste-recherche-suggestion:focus {
+  background: rgba(59, 130, 246, 0.18);
+  outline: none;
+}
+
+.ucb-liste-recherche-vide {
+  margin: 0.45rem 0 0;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  background: rgba(255, 45, 85, 0.1);
+  border: 1px solid rgba(255, 45, 85, 0.35);
+  color: #ff8fa3;
+  font-size: 0.88rem;
+}
+
+tr.ucb-liste-recherche-cible {
+  box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.75);
+  background-color: rgba(59, 130, 246, 0.12) !important;
+}
+
 /* ── Animations icônes sidebar au clic ── */
 .main-sidebar.sidebar-ucb-dark .nav-icon {
   display: inline-block;

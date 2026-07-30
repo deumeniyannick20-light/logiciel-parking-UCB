@@ -85,7 +85,7 @@
   <!-- LISTE DES POSTES -->
   <div class="row mb-3 align-items-center">
     <div class="col-sm-6">
-      <h1 class="m-0">Liste des postes </h1>
+      {% include "parc/includes/liste_entete.html" %}
     </div>
     <div class="col-sm-6 text-right">
       <a href="{% url 'poste_creer' %}" class="btn btn-success">
@@ -94,13 +94,15 @@
     </div>
   </div>
 
+  <div class="ucb-liste-avec-recherche">
+  {% include "parc/includes/liste_recherche.html" %}
   <div class="card card-primary card-outline">
     <div class="card-body p-0">
       {% if postes %}
         <table class="table table-striped table-hover m-0">
           <thead class="thead-light">
             <tr>
-              <th>Nom</th>
+              <th>Poste</th>
               <th>Place de parking affectée</th>
               <th class="text-right">Actions</th>
             </tr>
@@ -145,6 +147,7 @@
         <i class="fas fa-arrow-left mr-1"></i> Retour à l'accueil
       </a>
     </div>
+  </div>
   </div>
 {% endif %}
 

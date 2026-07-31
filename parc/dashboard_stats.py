@@ -17,6 +17,31 @@ def _arrondir_heure(dt):
     return dt.replace(minute=0, second=0, microsecond=0)
 
 
+def _arrondir_minute(dt):
+    return dt.replace(second=0, microsecond=0)
+
+
+def _detail_evenement(occ, type_evenement):
+    vehicule = occ.vehicule
+    if type_evenement == "entree":
+        conducteur = occ.conducteur_entree
+        instant = occ.date_entree
+    else:
+        conducteur = occ.conducteur_sortie
+        instant = occ.date_sortie
+    return {
+        "type": type_evenement,
+        "instant": instant.isoformat() if instant else None,
+        "label": instant.strftime("%H:%M") if instant else None,
+        "immatriculation": vehicule.immatriculation,
+        "marque": vehicule.marque,
+        "modele": vehicule.modele,
+        "vehicule": str(vehicule),
+        "conducteur": str(conducteur) if conducteur else "—",
+        "place": str(occ.place_parking),
+    }
+
+
 def _occupations_actives_a(instant, parking_id=None):
     qs = Occupation.objects.filter(date_entree__lte=instant).filter(
         Q(date_sortie__isnull=True) | Q(date_sortie__gt=instant)
@@ -30,25 +55,21 @@ def _evenements_periode(debut, fin, parking_id=None):
     qs = Occupation.objects.filter(
         Q(date_entree__gte=debut, date_entree__lt=fin)
         | Q(date_sortie__gte=debut, date_sortie__lt=fin)
-    ).select_related("vehicule", "place_parking", "place_parking__parking")
+    ).select_related(
+        "vehicule",
+        "conducteur_entree",
+        "conducteur_sortie",
+        "place_parking",
+        "place_parking__parking",
+    )
     if parking_id:
         qs = qs.filter(place_parking__parking_id=parking_id)
     evenements = []
     for occ in qs:
         if occ.date_entree >= debut and occ.date_entree < fin:
-            evenements.append({
-                "type": "entree",
-                "instant": occ.date_entree.isoformat(),
-                "vehicule": str(occ.vehicule),
-                "place": str(occ.place_parking),
-            })
+            evenements.append(_detail_evenement(occ, "entree"))
         if occ.date_sortie and occ.date_sortie >= debut and occ.date_sortie < fin:
-            evenements.append({
-                "type": "sortie",
-                "instant": occ.date_sortie.isoformat(),
-                "vehicule": str(occ.vehicule),
-                "place": str(occ.place_parking),
-            })
+            evenements.append(_detail_evenement(occ, "sortie"))
     evenements.sort(key=lambda e: e["instant"])
     return evenements
 
@@ -249,35 +270,77 @@ def stats_occupation_globale_universel():
     }
 
 
-def serie_flux_24h(points=24):
-    """Entrées et sorties horaires sur les dernières 24 h."""
+def serie_flux_24h(heures=24):
+    """Entrées et sorties horaires sur 24 h, avec détail minute par événement."""
     fin = _arrondir_heure(_maintenant()) + timedelta(hours=1)
-    debut = fin - timedelta(hours=points)
-    labels = []
-    entrees = []
-    sorties = []
-    instant = debut
-    while instant < fin:
-        suivant = instant + timedelta(hours=1)
-        labels.append(instant.strftime("%H:%M"))
-        entrees.append(
-            Occupation.objects.filter(
-                date_entree__gte=instant, date_entree__lt=suivant
-            ).count()
-        )
-        sorties.append(
-            Occupation.objects.filter(
-                date_sortie__gte=instant, date_sortie__lt=suivant
-            ).count()
-        )
-        instant = suivant
+    debut = fin - timedelta(hours=heures)
+    points_horaires = []
+    for i in range(heures):
+        instant = debut + timedelta(hours=i)
+        points_horaires.append({
+            "label": instant.strftime("%H:%M"),
+            "instant": instant.isoformat(),
+            "entrees": 0,
+            "sorties": 0,
+            "evenements": [],
+        })
+
+    def _index_horaire(instant):
+        return int((_arrondir_heure(instant) - debut).total_seconds() // 3600)
+
+    occupations = Occupation.objects.filter(
+        Q(date_entree__gte=debut, date_entree__lt=fin)
+        | Q(date_sortie__gte=debut, date_sortie__lt=fin)
+    ).select_related(
+        "vehicule",
+        "conducteur_entree",
+        "conducteur_sortie",
+        "place_parking",
+    )
+
+    for occ in occupations:
+        if occ.date_entree and debut <= occ.date_entree < fin:
+            idx = _index_horaire(occ.date_entree)
+            if 0 <= idx < len(points_horaires):
+                points_horaires[idx]["entrees"] += 1
+                points_horaires[idx]["evenements"].append(_detail_evenement(occ, "entree"))
+        if occ.date_sortie and debut <= occ.date_sortie < fin:
+            idx = _index_horaire(occ.date_sortie)
+            if 0 <= idx < len(points_horaires):
+                points_horaires[idx]["sorties"] += 1
+                points_horaires[idx]["evenements"].append(_detail_evenement(occ, "sortie"))
+
+    for point in points_horaires:
+        point["evenements"].sort(key=lambda ev: ev.get("instant") or "")
+
+    entrees = [point["entrees"] for point in points_horaires]
+    sorties = [point["sorties"] for point in points_horaires]
     return {
-        "labels": labels,
+        "labels": [point["label"] for point in points_horaires],
         "entrees": entrees,
         "sorties": sorties,
+        "points": points_horaires,
         "tendance_entrees": tendance_depuis_valeurs(entrees),
         "tendance_sorties": tendance_depuis_valeurs(sorties),
     }
+
+
+def tendance_fenetre_minutes(valeurs, fenetre=60):
+    """Compare la dernière heure glissante à l'heure précédente."""
+    if len(valeurs) < fenetre:
+        return {"direction": "stable", "variation": 0}
+    actuel = sum(valeurs[-fenetre:])
+    if len(valeurs) >= fenetre * 2:
+        avant = sum(valeurs[-fenetre * 2:-fenetre])
+    else:
+        avant = sum(valeurs[:-fenetre])
+    if actuel > avant:
+        direction = "hausse"
+    elif actuel < avant:
+        direction = "baisse"
+    else:
+        direction = "stable"
+    return {"direction": direction, "variation": actuel - avant}
 
 
 def tendance_depuis_valeurs(valeurs):

@@ -6,7 +6,6 @@ from django.db.models import Case, Q, Value, When
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET
-import json
 
 from .models import (
     Vehicule, Personnel, Zone,
@@ -16,6 +15,8 @@ from .forms import (
     VehiculeForm, PersonnelForm, ZoneForm,
     PosteForm, ParkingForm, PlaceParkingForm, UtilisateurForm,
     OccupationEntreeForm,
+    OccupationSortieForm,
+    OccupationModifierForm,
 )
 from .dashboard_stats import (
     contexte_tableau_de_bord,
@@ -25,11 +26,19 @@ from .dashboard_stats import (
 )
 from .place_alerte import alertes_actives, enregistrer_alertes, resoudre_alerte
 from .liste_signaux import contexte_liste, redirect_liste
+from .vehicule_conducteurs import cartographie_conducteurs_vehicules
+from .occupation_places import cartographie_places_conducteurs
+from .occupation_liste_groupee import grouper_occupations_par_jour_et_vehicule
+from .vehicule_dashboard_stats import (
+    contexte_dashboard_vehicule,
+    liste_vehicules_recherche,
+)
 from .vehicule_alerte import (
     alertes_vehicule_actives,
     enregistrer_alerte_vehicule,
     personnel_exige_vehicule,
     resoudre_alerte_vehicule,
+    retirer_alerte_vehicule,
 )
 from .decorators import administrateur_requis
 
@@ -44,7 +53,6 @@ def home(request):
     dashboard = contexte_tableau_de_bord()
     return render(request, "parc/home.html", {
         "dashboard": dashboard,
-        "dashboard_json": json.dumps(dashboard),
     })
 
 
@@ -73,10 +81,25 @@ def api_dashboard_parking(request, pk):
     return JsonResponse(donnees)
 
 
+@login_required
+@require_GET
+def api_vehicules_recherche(request):
+    return JsonResponse({"vehicules": liste_vehicules_recherche()})
+
+
+@login_required
+@require_GET
+def api_dashboard_vehicule(request, pk):
+    vehicule = get_object_or_404(Vehicule, pk=pk, actif=True)
+    periode = request.GET.get("periode", "jour")
+    mot_cle = request.GET.get("q", "")
+    return JsonResponse(contexte_dashboard_vehicule(vehicule, periode=periode, mot_cle=mot_cle))
+
+
 # -------------------- VEHICULES --------------------
 @login_required
 def vehicule_liste(request):
-    vehicules = Vehicule.objects.select_related("personnel", "chauffeur").order_by("id")
+    vehicules = Vehicule.objects.select_related("personnel").prefetch_related("chauffeurs").order_by("id")
     alertes = alertes_vehicule_actives(request)
     personnel_alerte = None
     if alertes:
@@ -208,6 +231,30 @@ def personnel_modifier(request, pk):
     return render(request, "parc/personnel.html", {"form": form, "titre": "Modifier un personnel"})
 
 
+@login_required
+def personnel_annuler_alerte_vehicule(request, pk):
+    """Annule la création d'un personnel encore sans véhicule (poste + place réservée)."""
+    alertes = set(alertes_vehicule_actives(request))
+    personnel = get_object_or_404(Personnel.objects.select_related("poste_obj"), pk=pk)
+
+    if pk not in alertes or not personnel_exige_vehicule(personnel):
+        messages.error(request, "Cette action n'est pas disponible pour ce personnel.")
+        return redirect("vehicule_liste")
+
+    if request.method != "POST":
+        return redirect("vehicule_liste")
+
+    libelle = f"{personnel.nom} {personnel.prenom}".strip()
+    with transaction.atomic():
+        _supprimer_personnel_et_dependances(personnel)
+    retirer_alerte_vehicule(request, pk)
+    messages.success(
+        request,
+        f"Création du personnel « {libelle} » annulée. Le poste réservé est à nouveau disponible.",
+    )
+    return redirect("personnel_liste")
+
+
 def _liberer_et_supprimer_occupations_vehicule(vehicule):
     places_a_verifier = set()
     for occupation in Occupation.objects.filter(vehicule=vehicule):
@@ -222,10 +269,16 @@ def _liberer_et_supprimer_occupations_vehicule(vehicule):
 
 
 def _supprimer_personnel_et_dependances(personnel):
-    vehicules = list(personnel.vehicules.all())
-    for vehicule in vehicules:
+    vehicules_titulaire = list(personnel.vehicules.all())
+    for vehicule in vehicules_titulaire:
         _liberer_et_supprimer_occupations_vehicule(vehicule)
         vehicule.delete()
+
+    for vehicule in Vehicule.objects.filter(chauffeurs=personnel).distinct():
+        vehicule.chauffeurs.remove(personnel)
+        if not vehicule.personnel_id and not vehicule.chauffeurs.exists():
+            _liberer_et_supprimer_occupations_vehicule(vehicule)
+            vehicule.delete()
 
     compte = Utilisateur.objects.filter(personnel_id=personnel.pk).first()
     if compte:
@@ -233,7 +286,7 @@ def _supprimer_personnel_et_dependances(personnel):
 
     personnel_pk = personnel.pk
     personnel.delete()
-    return vehicules, compte is not None, personnel_pk
+    return vehicules_titulaire, compte is not None, personnel_pk
 
 
 @login_required
@@ -396,6 +449,36 @@ def poste_supprimer(request, pk):
     return render(request, "parc/poste.html", {"action": "delete", "poste": poste})
 
 
+@login_required
+@require_GET
+def api_parking_places(request, pk):
+    """Liste en lecture seule des places d'un parking (popup liste des parkings)."""
+    parking = get_object_or_404(Parking, pk=pk)
+    reserve = parking.type_parking == Parking.TYPE_RESERVE
+    places = (
+        PlaceParking.objects.filter(parking=parking, actif=True)
+        .select_related("poste_affecte")
+        .order_by("numero")
+    )
+    return JsonResponse({
+        "parking": {
+            "id": parking.pk,
+            "nom": parking.nom,
+            "type_parking": parking.type_parking,
+            "reserve": reserve,
+        },
+        "places": [
+            {
+                "numero": place.numero,
+                "statut": place.statut,
+                "statut_libelle": place.get_statut_display(),
+                "poste": str(place.poste_affecte) if place.poste_affecte_id else None,
+            }
+            for place in places
+        ],
+    })
+
+
 # -------------------- PARKINGS --------------------
 @login_required
 def parking_liste(request):
@@ -427,8 +510,15 @@ def parking_creer(request):
     if request.method == "POST":
         form = ParkingForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Parking créé avec succès.")
+            parking = form.save()
+            if parking.type_parking == Parking.TYPE_UNIVERSEL:
+                messages.success(
+                    request,
+                    f"Parking créé avec succès. {parking.capacite_total} place(s) "
+                    f"ont été générées automatiquement.",
+                )
+            else:
+                messages.success(request, "Parking créé avec succès.")
             return redirect_liste(request, "parking_liste", "parkings", "ajout")
     else:
         form = ParkingForm()
@@ -442,8 +532,20 @@ def parking_modifier(request, pk):
     if request.method == "POST":
         form = ParkingForm(request.POST, instance=parking)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Parking modifié avec succès.")
+            nb_places_avant = parking.places.count()
+            parking = form.save()
+            if parking.type_parking == Parking.TYPE_UNIVERSEL:
+                ajoutees = parking.places.count() - nb_places_avant
+                if ajoutees > 0:
+                    messages.success(
+                        request,
+                        f"Parking modifié avec succès. {ajoutees} nouvelle(s) place(s) "
+                        f"ont été ajoutées automatiquement.",
+                    )
+                else:
+                    messages.success(request, "Parking modifié avec succès.")
+            else:
+                messages.success(request, "Parking modifié avec succès.")
             return redirect("parking_liste")
     else:
         form = ParkingForm(instance=parking)
@@ -588,10 +690,16 @@ def utilisateur_supprimer(request, pk):
 @login_required
 def occupation_liste(request):
     occupations = Occupation.objects.select_related(
-        "vehicule", "place_parking", "utilisateur"
+        "vehicule",
+        "place_parking",
+        "utilisateur",
+        "conducteur_entree",
+        "conducteur_sortie",
+        "conducteur_entree__poste_obj",
+        "conducteur_sortie__poste_obj",
     ).order_by("-date_entree")
     return render(request, "parc/occupation.html", {
-        "occupations": occupations,
+        "occupations_par_jour": grouper_occupations_par_jour_et_vehicule(occupations),
         "liste_titre": "Liste des occupations",
         **contexte_liste(request, "occupations", occupations),
     })
@@ -615,26 +723,38 @@ def occupation_creer(request):
     return render(request, "parc/occupation.html", {
         "form": form,
         "title": "Enregistrer une entrée",
+        "conducteurs_vehicules_json": cartographie_conducteurs_vehicules(),
+        "places_conducteurs_json": cartographie_places_conducteurs(),
     })
 
 
 @login_required
 def occupation_sortie(request, pk):
-    occupation = get_object_or_404(Occupation, pk=pk, date_sortie__isnull=True)
+    occupation = get_object_or_404(
+        Occupation.objects.select_related("vehicule").prefetch_related("vehicule__chauffeurs"),
+        pk=pk,
+        date_sortie__isnull=True,
+    )
 
     if request.method == "POST":
-        occupation.date_sortie = timezone.now()
-        occupation.full_clean()
-        occupation.save()
-        messages.success(
-            request,
-            f"Sortie enregistrée. Durée : {occupation.duree}",
-        )
-        return redirect("occupation_liste")
+        form = OccupationSortieForm(occupation, request.POST)
+        if form.is_valid():
+            occupation.conducteur_sortie = form.cleaned_data["conducteur_sortie"]
+            occupation.date_sortie = timezone.now()
+            occupation.full_clean()
+            occupation.save()
+            messages.success(
+                request,
+                f"Sortie enregistrée. Durée : {occupation.duree}",
+            )
+            return redirect("occupation_liste")
+    else:
+        form = OccupationSortieForm(occupation)
 
     return render(request, "parc/occupation.html", {
         "action": "sortie",
         "item": occupation,
+        "form": form,
     })
 
 
@@ -643,14 +763,9 @@ def occupation_modifier(request, pk):
     occupation = get_object_or_404(Occupation, pk=pk)
 
     if request.method == "POST":
-        form = OccupationEntreeForm(request.POST, instance=occupation)
+        form = OccupationModifierForm(request.POST, instance=occupation)
     else:
-        form = OccupationEntreeForm(instance=occupation)
-
-    form.fields["place_parking"].queryset = PlaceParking.objects.filter(
-        Q(statut=PlaceParking.STATUT_LIBRE, actif=True) |
-        Q(pk=occupation.place_parking_id)
-    )
+        form = OccupationModifierForm(instance=occupation)
 
     if request.method == "POST":
         if form.is_valid():
@@ -665,6 +780,8 @@ def occupation_modifier(request, pk):
     return render(request, "parc/occupation.html", {
         "form": form,
         "title": "Modifier une occupation",
+        "conducteurs_vehicules_json": cartographie_conducteurs_vehicules(),
+        "places_conducteurs_json": cartographie_places_conducteurs(),
     })
 
 

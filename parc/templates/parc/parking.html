@@ -1,4 +1,5 @@
 {% extends 'parc/base.html' %}
+{% load static %}
 
 {% block title %}
   {% if action == 'delete' or parking_to_delete %}
@@ -132,7 +133,15 @@
                     {{ parking.adresse|default:"Non renseignée" }}
                   </td>
                   <td class="align-middle text-center">
-                    <span class="badge badge-info p-2">{{ parking.capacite_total }} places</span>
+                    <button type="button"
+                            class="badge badge-info ucb-parking-places-badge"
+                            data-parking-id="{{ parking.pk }}"
+                            data-parking-nom="{{ parking.nom }}"
+                            aria-haspopup="dialog"
+                            aria-expanded="false"
+                            title="Voir les places de ce parking">
+                      {{ parking.capacite_total }} place{{ parking.capacite_total|pluralize }}
+                    </button>
                   </td>
                   <td class="align-middle text-center">
                     {% if parking.actif %}
@@ -142,11 +151,11 @@
                     {% endif %}
                   </td>
                   <td class="text-right align-middle">
-                    <a href="{% url 'parking_modifier' pk=parking.pk %}" class="btn btn-sm btn-warning mr-1" title="Modifier">
-                      <i class="fas fa-edit"></i> Modifier
+                    <a href="{% url 'parking_modifier' pk=parking.pk %}" class="btn btn-sm btn-warning btn-modifier-icon mr-1" title="Modifier" aria-label="Modifier">
+                      <i class="fas fa-edit" aria-hidden="true"></i>
                     </a>
-                    <a href="{% url 'parking_supprimer' pk=parking.pk %}" class="btn btn-sm btn-danger" title="Supprimer">
-                      <i class="fas fa-trash"></i> Supprimer
+                    <a href="{% url 'parking_supprimer' pk=parking.pk %}" class="btn btn-sm btn-danger btn-supprimer-icon" title="Supprimer" aria-label="Supprimer">
+                      <i class="fas fa-trash" aria-hidden="true"></i>
                     </a>
                   </td>
                 </tr>
@@ -172,4 +181,24 @@
   </div>
 {% endif %}
 
+{% endblock %}
+
+{% block page_overlays %}
+{% if liste_titre %}
+  <div id="ucb-parking-places-popup"
+       class="ucb-parking-places-popup"
+       role="dialog"
+       aria-modal="false"
+       aria-labelledby="ucb-parking-places-popup-entete"
+       hidden>
+    <div id="ucb-parking-places-popup-entete" class="ucb-parking-places-popup__entete" title="Double-clic ou clic prolongé pour déplacer"></div>
+    <ul id="ucb-parking-places-popup-liste" class="ucb-parking-places-popup__liste"></ul>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if liste_titre %}
+<script src="{% static 'parc/js/parking-places-popup.js' %}?v=20260731g"></script>
+{% endif %}
 {% endblock %}

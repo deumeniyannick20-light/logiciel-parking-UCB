@@ -123,11 +123,11 @@
                   {% endwith %}
                 </td>
                 <td class="text-right align-middle">
-                  <a href="{% url 'poste_modifier' pk=poste.pk %}" class="btn btn-sm btn-warning mr-1">
-                    <i class="fas fa-edit"></i> Modifier
+                  <a href="{% url 'poste_modifier' pk=poste.pk %}" class="btn btn-sm btn-warning btn-modifier-icon mr-1" title="Modifier" aria-label="Modifier">
+                    <i class="fas fa-edit" aria-hidden="true"></i>
                   </a>
-                  <a href="{% url 'poste_supprimer' pk=poste.pk %}" class="btn btn-sm btn-danger">
-                    <i class="fas fa-trash"></i> Supprimer
+                  <a href="{% url 'poste_supprimer' pk=poste.pk %}" class="btn btn-sm btn-danger btn-supprimer-icon" title="Supprimer" aria-label="Supprimer">
+                    <i class="fas fa-trash" aria-hidden="true"></i>
                   </a>
                 </td>
               </tr>

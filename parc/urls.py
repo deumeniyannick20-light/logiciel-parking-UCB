@@ -63,6 +63,9 @@ urlpatterns = [
 
     path("api/dashboard/vehicules/", views.api_dashboard_vehicules, name="api_dashboard_vehicules"),
     path("api/dashboard/parking/<int:pk>/", views.api_dashboard_parking, name="api_dashboard_parking"),
+    path("api/dashboard/vehicule/<int:pk>/", views.api_dashboard_vehicule, name="api_dashboard_vehicule"),
+    path("api/vehicules/recherche/", views.api_vehicules_recherche, name="api_vehicules_recherche"),
+    path("api/parkings/<int:pk>/places/", views.api_parking_places, name="api_parking_places"),
 
     path("vehicules/", views.vehicule_liste, name="vehicule_liste"),
     path("vehicules/creer/", views.vehicule_creer, name="vehicule_creer"),
@@ -73,6 +76,11 @@ urlpatterns = [
     path("personnels/creer/", views.personnel_creer, name="personnel_creer"),
     path("personnels/<int:pk>/modifier/", views.personnel_modifier, name="personnel_modifier"),
     path("personnels/<int:pk>/supprimer/", views.personnel_supprimer, name="personnel_supprimer"),
+    path(
+        "personnels/<int:pk>/annuler-creation/",
+        views.personnel_annuler_alerte_vehicule,
+        name="personnel_annuler_alerte_vehicule",
+    ),
 
     path("zones/", views.zone_liste, name="zone_liste"),
     path("zones/creer/", views.zone_creer, name="zone_creer"),

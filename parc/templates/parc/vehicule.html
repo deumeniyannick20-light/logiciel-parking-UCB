@@ -1,4 +1,5 @@
 {% extends 'parc/base.html' %}
+{% load static %}
 
 {% block title %}
   {% if action == 'delete' or vehicule %}
@@ -63,7 +64,7 @@
           <h3 class="card-title">{{ titre }}</h3>
         </div>
         
-        <form method="post">
+        <form method="post" id="ucb-vehicule-form">
           {% csrf_token %}
           {% if mode_alerte_vehicule and personnel_vehicule_verrouille %}
           <div class="alert alert-danger mx-3 mt-3 mb-0">
@@ -74,15 +75,27 @@
           <div class="card-body">
             {{ form.as_p }}
           </div>
-          <div class="card-footer">
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-save mr-1"></i> Enregistrer
-            </button>
-            <a href="{% url 'vehicule_liste' %}" class="btn btn-secondary ml-2">
-              ← Retour à la liste
-            </a>
-          </div>
         </form>
+        <div class="card-footer d-flex flex-wrap align-items-center">
+          <button type="submit" form="ucb-vehicule-form" class="btn btn-primary">
+            <i class="fas fa-save mr-1"></i> Enregistrer
+          </button>
+          {% if mode_alerte_vehicule and personnel_vehicule_verrouille %}
+          <form method="post"
+                action="{% url 'personnel_annuler_alerte_vehicule' pk=personnel_vehicule_verrouille %}"
+                class="d-inline ml-2"
+                onsubmit="return confirm('Annuler la création de ce personnel ? Cette action est irréversible.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger ucb-alerte-autorise">
+              <i class="fas fa-times mr-1"></i> Annuler la création du personnel
+            </button>
+          </form>
+          {% else %}
+          <a href="{% url 'vehicule_liste' %}" class="btn btn-secondary ml-2">
+            ← Retour à la liste
+          </a>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
@@ -101,7 +114,11 @@
       {% else %}
         un personnel affecté à un poste avec place réservée doit avoir un véhicule enregistré.
       {% endif %}
-      Cliquez sur <strong>Ajouter un véhicule</strong> (bouton clignotant).
+      Cliquez sur <strong>Ajouter un véhicule</strong> (bouton clignotant)
+      {% if personnel_alerte %}
+        ou <strong>annulez la création</strong> du personnel.
+      {% endif %}
+      .
     </span>
   </div>
   {% endif %}
@@ -118,6 +135,17 @@
           <i class="fas fa-plus-circle mr-1"></i> Ajouter un véhicule
         </a>
       </span>
+      {% if personnel_alerte %}
+      <form method="post"
+            action="{% url 'personnel_annuler_alerte_vehicule' pk=personnel_alerte.pk %}"
+            class="d-inline ml-2"
+            onsubmit="return confirm('Annuler la création de ce personnel ? Cette action est irréversible.');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger ucb-alerte-autorise">
+          <i class="fas fa-user-times mr-1"></i> Annuler la création du personnel
+        </button>
+      </form>
+      {% endif %}
       {% else %}
       <a href="{% url 'vehicule_creer' %}" class="btn btn-success">
         <i class="fas fa-plus-circle mr-1"></i> Ajouter un véhicule
@@ -134,8 +162,8 @@
         <table class="table table-striped table-hover m-0">
           <thead class="thead-light">
             <tr>
-              <th>Marque & Modèle</th>
               <th>Immatriculation</th>
+              <th>Marque & Modèle</th>
               <th>Titulaire</th>
               <th>Chauffeur</th>
               <th class="text-right">Actions</th>
@@ -144,24 +172,34 @@
           <tbody>
             {% for vehicule in vehicules %}
               <tr>
+                <td class="align-middle">
+                  <span class="badge badge-secondary p-2">{{ vehicule.immatriculation }}</span>
+                </td>
                 <td class="align-middle font-weight-bold">
                   <i class="fas fa-car text-primary mr-2"></i> {{ vehicule.marque }} {{ vehicule.modele }}
                 </td>
                 <td class="align-middle">
-                  <span class="badge badge-secondary p-2">{{ vehicule.immatriculation }}</span>
+                  {% if vehicule.personnel %}
+                    {{ vehicule.personnel }}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
                 </td>
                 <td class="align-middle">
-                  {{ vehicule.personnel }}
-                </td>
-                <td class="align-middle">
-                  {{ vehicule.chauffeur|default:"—" }}
+                  {% with chauffeurs=vehicule.chauffeurs.all %}
+                    {% if chauffeurs %}
+                      {% for chauffeur in chauffeurs %}{{ chauffeur }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  {% endwith %}
                 </td>
                 <td class="text-right align-middle">
-                  <a href="{% url 'vehicule_modifier' pk=vehicule.pk %}" class="btn btn-sm btn-warning mr-1{% if mode_alerte_vehicule %} ucb-alerte-bloque{% endif %}">
-                    <i class="fas fa-edit"></i> Modifier
+                  <a href="{% url 'vehicule_modifier' pk=vehicule.pk %}" class="btn btn-sm btn-warning btn-modifier-icon mr-1{% if mode_alerte_vehicule %} ucb-alerte-bloque{% endif %}" title="Modifier" aria-label="Modifier">
+                    <i class="fas fa-edit" aria-hidden="true"></i>
                   </a>
-                  <a href="{% url 'vehicule_supprimer' pk=vehicule.pk %}" class="btn btn-sm btn-danger{% if mode_alerte_vehicule %} ucb-alerte-bloque{% endif %}">
-                    <i class="fas fa-trash"></i> Supprimer
+                  <a href="{% url 'vehicule_supprimer' pk=vehicule.pk %}" class="btn btn-sm btn-danger btn-supprimer-icon{% if mode_alerte_vehicule %} ucb-alerte-bloque{% endif %}" title="Supprimer" aria-label="Supprimer">
+                    <i class="fas fa-trash" aria-hidden="true"></i>
                   </a>
                 </td>
               </tr>
@@ -223,4 +261,10 @@
   </div>
 {% endif %}
 
+{% endblock %}
+
+{% block extra_js %}
+{% if form %}
+<script src="{% static 'parc/js/vehicule-form.js' %}?v=20260731b"></script>
+{% endif %}
 {% endblock %}

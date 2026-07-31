@@ -73,6 +73,10 @@
           {% endif %}
           <div class="card-body">
             {{ form.as_p }}
+            <p id="ucb-place-poste-aide" class="text-muted small mb-0" hidden>
+              Parking universel : le poste affecté doit rester sur « — Aucun — ».
+              Pour affecter un poste, choisissez un parking réservé.
+            </p>
           </div>
           <div class="card-footer">
             <button type="submit" class="btn btn-primary">
@@ -86,6 +90,43 @@
       </div>
     </div>
   </div>
+
+  <script id="ucb-types-parking" type="application/json">{{ form.types_parking|default:"{}"|safe }}</script>
+  <script>
+  (function () {
+    var parking = document.getElementById('id_parking');
+    var poste = document.getElementById('id_poste_affecte');
+    var aide = document.getElementById('ucb-place-poste-aide');
+    if (!parking || !poste) return;
+
+    var types = {};
+    try {
+      types = JSON.parse(document.getElementById('ucb-types-parking').textContent || '{}');
+    } catch (e) {
+      types = {};
+    }
+
+    function estUniversel() {
+      return types[parking.value] === 'universel';
+    }
+
+    function appliquerReglePoste() {
+      if (estUniversel()) {
+        poste.value = '';
+        poste.disabled = true;
+        poste.classList.add('ucb-champ-desactive');
+        if (aide) aide.hidden = false;
+      } else {
+        poste.disabled = false;
+        poste.classList.remove('ucb-champ-desactive');
+        if (aide) aide.hidden = true;
+      }
+    }
+
+    parking.addEventListener('change', appliquerReglePoste);
+    appliquerReglePoste();
+  })();
+  </script>
 
 {% else %}
   <!-- VUE LISTE PLACES -->
@@ -174,12 +215,14 @@
                 </td>
                 <td class="text-right align-middle">
                   <a href="{% url 'placeparking_modifier' pk=place.pk %}"
-                     class="btn btn-sm btn-warning mr-1 ucb-alerte-modifier{% if place.pk in places_alerte %} ucb-alerte-autorise{% endif %}">
-                    <i class="fas fa-edit"></i> Modifier
+                     class="btn btn-sm btn-warning btn-modifier-icon mr-1 ucb-alerte-modifier{% if place.pk in places_alerte %} ucb-alerte-autorise{% endif %}"
+                     title="Modifier" aria-label="Modifier">
+                    <i class="fas fa-edit" aria-hidden="true"></i>
                   </a>
                   <a href="{% url 'placeparking_supprimer' pk=place.pk %}"
-                     class="btn btn-sm btn-danger ucb-alerte-bloque{% if place.pk in places_alerte %} d-none{% endif %}">
-                    <i class="fas fa-trash"></i> Supprimer
+                     class="btn btn-sm btn-danger btn-supprimer-icon ucb-alerte-bloque{% if place.pk in places_alerte %} d-none{% endif %}"
+                     title="Supprimer" aria-label="Supprimer">
+                    <i class="fas fa-trash" aria-hidden="true"></i>
                   </a>
                 </td>
               </tr>

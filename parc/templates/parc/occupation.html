@@ -1,4 +1,5 @@
 {% extends 'parc/base.html' %}
+{% load static %}
 {% block title %}
 {% if action == 'delete' %}
   Supprimer l'occupation - Parking UCB
@@ -69,16 +70,18 @@
           <p><strong>Véhicule :</strong> {{ item.vehicule }}</p>
           <p><strong>Place :</strong> {{ item.place_parking }}</p>
           <p><strong>Entrée :</strong> {{ item.date_entree|date:"d/m/Y H:i" }}</p>
-          <p class="lead mb-0">Confirmer la sortie de ce véhicule ?</p>
+          <p><strong>Conducteur à l'entrée :</strong> {{ item.conducteur_entree }}</p>
+          <p class="lead mb-3">Indiquez le conducteur à la sortie, puis confirmez.</p>
+          <form method="post" id="ucb-form-sortie">
+            {% csrf_token %}
+            {{ form.as_p }}
+          </form>
         </div>
 
         <div class="card-footer">
-          <form method="post" class="d-inline">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-warning">
-              <i class="fas fa-sign-out-alt mr-1"></i> Confirmer la sortie
-            </button>
-          </form>
+          <button type="submit" form="ucb-form-sortie" class="btn btn-warning">
+            <i class="fas fa-sign-out-alt mr-1"></i> Confirmer la sortie
+          </button>
           <a href="{% url 'occupation_liste' %}" class="btn btn-secondary ml-2">
             ← Annuler
           </a>
@@ -120,6 +123,13 @@
     </div>
   </div>
 
+  {% if conducteurs_vehicules_json %}
+  {{ conducteurs_vehicules_json|json_script:"conducteurs-vehicules-data" }}
+  {% endif %}
+  {% if places_conducteurs_json %}
+  {{ places_conducteurs_json|json_script:"places-conducteurs-data" }}
+  {% endif %}
+
 {% else %}
   <!-- VUE LISTE DES OCCUPATIONS -->
   <div class="row mb-3 align-items-center">
@@ -135,67 +145,111 @@
 
   <div class="ucb-liste-avec-recherche">
   {% include "parc/includes/liste_recherche.html" %}
-  <div class="card card-primary card-outline">
+  <div class="card card-primary card-outline" id="ucb-liste-occupations">
     <div class="card-body p-0">
-      {% if occupations %}
-        <table class="table table-striped table-hover m-0">
+      {% if occupations_par_jour %}
+        <div class="ucb-liste-occupations-scroll">
+        <table class="table table-striped table-hover m-0 ucb-liste-occupations-table">
           <thead class="thead-light">
             <tr>
               <th>Véhicule</th>
               <th>Place de parking</th>
+              <th>Conducteur entrée</th>
+              <th>Conducteur sortie</th>
               <th>Enregistré par</th>
-              <th>Date d'entrée</th>
-              <th>Date de sortie</th>
-              <th>Statut</th>
-              <th class="text-right">Actions</th>
+              <th class="ucb-col-date">Date d'entrée</th>
+              <th class="ucb-col-date">Date de sortie</th>
+              <th class="text-right ucb-col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {% for occ in occupations %}
-              <tr>
-                <td class="align-middle font-weight-bold">
-                  {{ occ.vehicule }}
-                </td>
-                <td class="align-middle">
-                  {{ occ.place_parking }}
-                </td>
-                <td class="align-middle">
-                  {{ occ.utilisateur|default:"—" }}
-                </td>
-                <td class="align-middle">
-                  {{ occ.date_entree|date:"d/m/Y H:i" }}
-                </td>
-                <td class="align-middle">
-                  {% if occ.date_sortie %}
-                    {{ occ.date_sortie|date:"d/m/Y H:i" }}
-                  {% else %}
-                    <span class="badge badge-warning">En cours</span>
-                  {% endif %}
-                </td>
-                <td class="align-middle">
-                  {% if not occ.date_sortie %}
-                    <span class="badge badge-danger">En cours</span>
-                  {% else %}
-                    <span class="badge badge-secondary">Terminée</span>
-                  {% endif %}
-                </td>
-                <td class="text-right align-middle">
-                  {% if not occ.date_sortie %}
-                    <a href="{% url 'occupation_sortie' pk=occ.pk %}" class="btn btn-sm btn-success mr-1">
-                      <i class="fas fa-sign-out-alt"></i> Sortie
-                    </a>
-                  {% endif %}
-                  <a href="{% url 'occupation_modifier' pk=occ.pk %}" class="btn btn-sm btn-warning mr-1">
-                    <i class="fas fa-edit"></i> Modifier
-                  </a>
-                  <a href="{% url 'occupation_supprimer' pk=occ.pk %}" class="btn btn-sm btn-danger">
-                    <i class="fas fa-trash"></i> Supprimer
-                  </a>
-                </td>
+            {% for jour in occupations_par_jour %}
+              <tr class="ucb-occ-jour-entete">
+                <td colspan="8">{{ jour.libelle }}</td>
               </tr>
+              {% for ligne in jour.lignes %}
+                <tr>
+                  <td class="align-middle font-weight-bold" title="{{ ligne.vehicule }}">
+                    {{ ligne.vehicule }}
+                    {% if ligne.mouvements|length > 1 %}
+                      <span class="badge badge-secondary ml-1" title="{{ ligne.mouvements|length }} mouvements">{{ ligne.mouvements|length }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="align-middle ucb-occ-cellule-mouvements">
+                    {% for occ in ligne.mouvements %}
+                      <div class="ucb-occ-mouvement" title="{{ occ.place_parking }}">{{ occ.place_parking }}</div>
+                    {% endfor %}
+                  </td>
+                  <td class="align-middle ucb-occ-cellule-mouvements">
+                    {% for occ in ligne.mouvements %}
+                      <div class="ucb-occ-mouvement" title="{{ occ.conducteur_entree }}">{{ occ.conducteur_entree }}</div>
+                    {% endfor %}
+                  </td>
+                  <td class="align-middle ucb-occ-cellule-mouvements">
+                    {% for occ in ligne.mouvements %}
+                      <div class="ucb-occ-mouvement">
+                        {% if occ.conducteur_sortie %}
+                          <span title="{{ occ.conducteur_sortie }}">{{ occ.conducteur_sortie }}</span>
+                        {% else %}
+                          <span class="text-muted">—</span>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </td>
+                  <td class="align-middle ucb-occ-cellule-mouvements">
+                    {% for occ in ligne.mouvements %}
+                      <div class="ucb-occ-mouvement">
+                        {% if occ.utilisateur %}
+                          <span title="{{ occ.utilisateur }}">{{ occ.utilisateur.nom_complet }}</span>
+                        {% else %}
+                          —
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </td>
+                  <td class="align-middle ucb-col-date ucb-occ-cellule-mouvements">
+                    {% for occ in ligne.mouvements %}
+                      <div class="ucb-occ-mouvement">{{ occ.date_entree|date:"H:i" }}</div>
+                    {% endfor %}
+                  </td>
+                  <td class="align-middle ucb-col-date ucb-occ-cellule-mouvements">
+                    {% for occ in ligne.mouvements %}
+                      <div class="ucb-occ-mouvement">
+                        {% if occ.date_sortie %}
+                          {{ occ.date_sortie|date:"H:i" }}
+                        {% else %}
+                          <span class="badge badge-warning">En cours</span>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </td>
+                  <td class="align-middle ucb-col-actions ucb-occ-cellule-mouvements">
+                    {% for occ in ligne.mouvements %}
+                      <div class="ucb-occ-mouvement ucb-occ-mouvement-actions">
+                        <div class="ucb-actions-groupe" role="group" aria-label="Actions">
+                        {% if not occ.date_sortie %}
+                          <a href="{% url 'occupation_sortie' pk=occ.pk %}" class="btn btn-sm btn-success btn-sortie-icon" title="Enregistrer la sortie" aria-label="Enregistrer la sortie">
+                            <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                          </a>
+                        {% else %}
+                          <span class="ucb-action-placeholder" aria-hidden="true"></span>
+                        {% endif %}
+                        <a href="{% url 'occupation_modifier' pk=occ.pk %}" class="btn btn-sm btn-warning btn-modifier-icon" title="Modifier" aria-label="Modifier">
+                          <i class="fas fa-edit" aria-hidden="true"></i>
+                        </a>
+                        <a href="{% url 'occupation_supprimer' pk=occ.pk %}" class="btn btn-sm btn-danger btn-supprimer-icon" title="Supprimer" aria-label="Supprimer">
+                          <i class="fas fa-trash" aria-hidden="true"></i>
+                        </a>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </td>
+                </tr>
+              {% endfor %}
             {% endfor %}
           </tbody>
         </table>
+        </div>
       {% else %}
         <div class="card-body text-center py-5">
           <i class="fas fa-clock fa-3x text-muted mb-3"></i>
@@ -213,4 +267,10 @@
   </div>
 {% endif %}
 
+{% endblock %}
+
+{% block extra_js %}
+{% if conducteurs_vehicules_json %}
+<script src="{% static 'parc/js/occupation-conducteur.js' %}"></script>
+{% endif %}
 {% endblock %}

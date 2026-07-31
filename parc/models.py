@@ -46,6 +46,10 @@ class Poste(NormalisationTexteMixin, models.Model):
         default=False,
         help_text="Cocher pour les postes de direction (DG, DGA, DRH...)"
     )
+    est_chauffeur = models.BooleanField(
+        default=False,
+        help_text="Cocher pour le poste de chauffeur (personnel affectable comme chauffeur de véhicule).",
+    )
     actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
 
@@ -129,6 +133,9 @@ class Parking(NormalisationTexteMixin, models.Model):
     def save(self, *args, **kwargs):
         self.normaliser_texte()
         super().save(*args, **kwargs)
+        if self.type_parking == self.TYPE_UNIVERSEL:
+            from .parking_places import synchroniser_places_universel
+            synchroniser_places_universel(self)
 
 
 class PlaceParking(NormalisationTexteMixin, models.Model):
@@ -233,6 +240,14 @@ class Personnel(NormalisationTexteMixin, models.Model):
     def __str__(self):
         return f"{self.nom} {self.prenom} ({self.poste_obj})"
 
+    def clean(self):
+        from .personnel_postes import message_poste_indisponible, personnel_peut_occuper_poste
+
+        if self.poste_obj_id and not personnel_peut_occuper_poste(
+            self.poste_obj, personnel=self
+        ):
+            raise ValidationError({"poste_obj": message_poste_indisponible()})
+
     def save(self, *args, **kwargs):
         self.normaliser_texte()
         super().save(*args, **kwargs)
@@ -247,19 +262,20 @@ class Vehicule(NormalisationTexteMixin, models.Model):
     actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
 
-    # Propriétaire / titulaire (obligatoire)
+    # Titulaire (0 ou 1)
     personnel = models.ForeignKey(
         Personnel,
         on_delete=models.PROTECT,
         related_name="vehicules",
-    )
-    # Chauffeur éventuel (0..1)
-    chauffeur = models.ForeignKey(
-        Personnel,
-        on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        verbose_name="Titulaire",
+    )
+    chauffeurs = models.ManyToManyField(
+        Personnel,
+        blank=True,
         related_name="vehicules_conduits",
+        verbose_name="Chauffeurs",
     )
 
     class Meta:
@@ -268,8 +284,31 @@ class Vehicule(NormalisationTexteMixin, models.Model):
         ordering = ["immatriculation"]
 
     def clean(self):
-        if self.chauffeur_id and self.chauffeur_id == self.personnel_id:
-            raise ValidationError("Le chauffeur ne peut pas être la même personne que le titulaire.")
+        if not self.pk:
+            return
+        chauffeur_ids = set(self.chauffeurs.values_list("pk", flat=True))
+        if self.personnel_id and self.personnel_id in chauffeur_ids:
+            raise ValidationError("Le titulaire ne peut pas figurer parmi les chauffeurs.")
+        if not self.personnel_id and not chauffeur_ids:
+            raise ValidationError(
+                "Indiquez un titulaire ou au moins un chauffeur pour ce véhicule."
+            )
+        if self.pk:
+            from .poste_chauffeur import personnel_est_chauffeur
+            for chauffeur in self.chauffeurs.all():
+                if not personnel_est_chauffeur(chauffeur):
+                    raise ValidationError(
+                        "Seuls les membres du personnel au poste Chauffeur peuvent être "
+                        "affectés comme chauffeurs du véhicule."
+                    )
+
+    def ids_conducteurs_autorises(self):
+        ids = set()
+        if self.personnel_id:
+            ids.add(self.personnel_id)
+        if self.pk:
+            ids.update(self.chauffeurs.values_list("pk", flat=True))
+        return ids
 
     def __str__(self):
         return f"{self.immatriculation} - {self.marque} {self.modele}"
@@ -370,6 +409,20 @@ class Occupation(NormalisationTexteMixin, models.Model):
         related_name="occupations_enregistrees",
         help_text="Vigile / agent ayant enregistré le mouvement",
     )
+    conducteur_entree = models.ForeignKey(
+        Personnel,
+        on_delete=models.PROTECT,
+        related_name="occupations_entree",
+        verbose_name="Conducteur à l'entrée",
+    )
+    conducteur_sortie = models.ForeignKey(
+        Personnel,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="occupations_sortie",
+        verbose_name="Conducteur à la sortie",
+    )
     date_entree = models.DateTimeField(default=timezone.now)
     date_sortie = models.DateTimeField(null=True, blank=True)
     observation = models.CharField(max_length=255, blank=True)
@@ -389,11 +442,28 @@ class Occupation(NormalisationTexteMixin, models.Model):
         return fin - self.date_entree
 
     def clean(self):
+        from .vehicule_conducteurs import conducteur_autorise_pour_vehicule
+
         place = self.place_parking
         vehicule = self.vehicule
 
         if self.date_sortie and self.date_sortie < self.date_entree:
             raise ValidationError("La date de sortie ne peut pas être antérieure à l'entrée.")
+
+        if self.conducteur_entree_id and not conducteur_autorise_pour_vehicule(
+            vehicule, self.conducteur_entree
+        ):
+            raise ValidationError(
+                "Le conducteur à l'entrée doit être le titulaire ou un chauffeur du véhicule."
+            )
+
+        if self.date_sortie:
+            if not self.conducteur_sortie_id:
+                raise ValidationError("Indiquez le conducteur à la sortie.")
+            if not conducteur_autorise_pour_vehicule(vehicule, self.conducteur_sortie):
+                raise ValidationError(
+                    "Le conducteur à la sortie doit être le titulaire ou un chauffeur du véhicule."
+                )
 
         # Nouvelle entrée uniquement
         if self.date_sortie is None:
@@ -407,11 +477,9 @@ class Occupation(NormalisationTexteMixin, models.Model):
             if deja_gare:
                 raise ValidationError("Ce véhicule est déjà garé sur une autre place.")
 
-            if place.poste_affecte_id:
-                postes_autorises = {vehicule.personnel.poste_obj_id}
-                if vehicule.chauffeur_id:
-                    postes_autorises.add(vehicule.chauffeur.poste_obj_id)
-                if place.poste_affecte_id not in postes_autorises:
+            if place.poste_affecte_id and self.conducteur_entree_id:
+                poste_conducteur = self.conducteur_entree.poste_obj_id
+                if place.poste_affecte_id != poste_conducteur:
                     raise ValidationError(
                         f"Cette place est réservée au poste « {place.poste_affecte} »."
                     )

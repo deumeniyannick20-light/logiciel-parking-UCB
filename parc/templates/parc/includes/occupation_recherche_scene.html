@@ -1,0 +1,154 @@
+<div class="occupation-recherche-scene" id="occupation-recherche-scene" hidden aria-hidden="true">
+  <div class="occupation-recherche-scene__inner">
+
+    {# ── Étape 1 : sélection véhicule ── #}
+    <section class="occ-recherche-etape" id="occ-recherche-etape-picker">
+      <header class="occ-recherche-entete">
+        <div>
+          <h2 class="occ-recherche-titre">Recherche véhicule</h2>
+          <p class="occ-recherche-sous-titre">Sélectionnez un véhicule pour consulter son tableau de bord et son historique d'occupation.</p>
+        </div>
+        <button type="button" class="btn fin-btn-ghost btn-sm" id="occ-recherche-fermer" aria-label="Fermer la recherche">
+          <i class="fas fa-times mr-1"></i> Fermer
+        </button>
+      </header>
+
+      <div class="occ-recherche-module">
+        <button type="button" class="occ-recherche-vehicule-trigger" id="occ-recherche-vehicule-trigger" aria-expanded="false" aria-controls="occ-recherche-liste-vehicules">
+          <span class="occ-recherche-vehicule-trigger__icone"><i class="fas fa-car" aria-hidden="true"></i></span>
+          <span class="occ-recherche-vehicule-trigger__texte">
+            <span class="occ-recherche-vehicule-trigger__label">Véhicule</span>
+            <span class="occ-recherche-vehicule-trigger__valeur" id="occ-recherche-vehicule-placeholder">Cliquez pour afficher la liste des véhicules</span>
+          </span>
+          <i class="fas fa-chevron-down occ-recherche-vehicule-trigger__fleche" aria-hidden="true"></i>
+        </button>
+
+        <div class="occ-recherche-liste-panel" id="occ-recherche-liste-vehicules" hidden>
+          <div class="occ-recherche-liste-barre">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input type="search" id="occ-recherche-filtre-vehicules" class="occ-recherche-liste-input" placeholder="Filtrer par immatriculation, marque, modèle…" autocomplete="off">
+          </div>
+          <ul class="occ-recherche-liste-vehicules" id="occ-recherche-liste-vehicules-ul" role="listbox"></ul>
+          <p class="occ-recherche-liste-vide" id="occ-recherche-liste-vide" hidden>Aucun véhicule ne correspond à votre recherche.</p>
+        </div>
+      </div>
+    </section>
+
+    {# ── Étape 2 : tableau de bord véhicule ── #}
+    <section class="occ-recherche-etape" id="occ-recherche-etape-dashboard" hidden>
+      <header class="occ-recherche-entete">
+        <div class="occ-recherche-entete-gauche">
+          <button type="button" class="btn fin-btn-ghost btn-sm occ-recherche-retour" id="occ-recherche-retour-vehicules" aria-label="Retour à la liste des véhicules">
+            <i class="fas fa-arrow-left mr-1"></i> Véhicules
+          </button>
+          <div>
+            <h2 class="occ-recherche-titre" id="occ-vehicule-titre">—</h2>
+            <p class="occ-recherche-sous-titre mb-0" id="occ-vehicule-sous-titre">Tableau de bord individuel</p>
+          </div>
+        </div>
+        <button type="button" class="btn fin-btn-ghost btn-sm" id="occ-recherche-fermer-dashboard" aria-label="Fermer la recherche">
+          <i class="fas fa-times mr-1"></i> Fermer
+        </button>
+      </header>
+
+      {# État actuel #}
+      <div class="occ-vehicule-etat" id="occ-vehicule-etat">
+        <div class="occ-vehicule-etat__badge" id="occ-vehicule-etat-badge">
+          <i class="fas fa-circle" aria-hidden="true"></i>
+          <span id="occ-vehicule-etat-texte">Chargement…</span>
+        </div>
+        <div class="occ-vehicule-etat__details" id="occ-vehicule-etat-details"></div>
+      </div>
+
+      {# Filtres période #}
+      <div class="occ-vehicule-periodes" role="tablist" aria-label="Plage de temps">
+        <button type="button" class="occ-vehicule-periode active" data-periode="jour" role="tab" aria-selected="true">Jour</button>
+        <button type="button" class="occ-vehicule-periode" data-periode="semaine" role="tab" aria-selected="false">Semaine</button>
+        <button type="button" class="occ-vehicule-periode" data-periode="mois" role="tab" aria-selected="false">Mois</button>
+        <button type="button" class="occ-vehicule-periode" data-periode="annee" role="tab" aria-selected="false">Année</button>
+        <span class="occ-vehicule-periode-libelle" id="occ-vehicule-periode-libelle"></span>
+      </div>
+
+      {# KPI #}
+      <div class="fin-kpi-row occ-vehicule-kpi-row">
+        <article class="fin-metric fin-metric--blue">
+          <p class="fin-metric-label">Entrées</p>
+          <div class="fin-metric-value"><span data-occ-count="entrees">0</span></div>
+        </article>
+        <article class="fin-metric fin-metric--gold">
+          <p class="fin-metric-label">Sorties</p>
+          <div class="fin-metric-value"><span data-occ-count="sorties">0</span></div>
+        </article>
+        <article class="fin-metric fin-metric--teal">
+          <p class="fin-metric-label">Temps sur site</p>
+          <div class="fin-metric-value occ-vehicule-duree"><span data-occ-text="duree_totale_label">—</span></div>
+        </article>
+        <article class="fin-metric fin-metric--purple">
+          <p class="fin-metric-label">Places utilisées</p>
+          <div class="fin-metric-value"><span data-occ-count="places_distinctes">0</span></div>
+        </article>
+      </div>
+
+      {# Graphiques #}
+      <div class="fin-charts-row occ-vehicule-charts">
+        <div class="fin-panel fin-panel--chart">
+          <div class="fin-panel-header">
+            <div>
+              <h3 class="fin-panel-title">Mouvements</h3>
+              <p class="fin-panel-desc">Entrées et sorties sur la période sélectionnée.</p>
+            </div>
+          </div>
+          <div class="fin-chart-area">
+            <canvas id="occ-vehicule-flux-chart"></canvas>
+          </div>
+          <div class="fin-chart-legend">
+            <span class="fin-legend-item"><span class="fin-legend-dot fin-legend-dot--blue"></span> Entrées</span>
+            <span class="fin-legend-item"><span class="fin-legend-dot fin-legend-dot--red"></span> Sorties</span>
+          </div>
+        </div>
+        <div class="fin-panel fin-panel--chart">
+          <div class="fin-panel-header">
+            <div>
+              <h3 class="fin-panel-title">Présence sur site</h3>
+              <p class="fin-panel-desc">Minutes passées sur le site par intervalle.</p>
+            </div>
+          </div>
+          <div class="fin-chart-area">
+            <canvas id="occ-vehicule-presence-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      {# Historique #}
+      <div class="fin-panel occ-vehicule-historique">
+        <div class="fin-panel-header">
+          <div>
+            <h3 class="fin-panel-title">Historique des occupations</h3>
+            <p class="fin-panel-desc">Mouvements sur la période — filtrez par mot-clé (place, conducteur, date…).</p>
+          </div>
+          <div class="occ-historique-recherche">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input type="search" id="occ-historique-filtre" class="occ-historique-recherche-input" placeholder="Rechercher dans l'historique…" autocomplete="off">
+          </div>
+        </div>
+        <div class="occ-historique-table-wrap">
+          <table class="table table-striped table-hover m-0 occ-historique-table">
+            <thead>
+              <tr>
+                <th>Place</th>
+                <th>Conducteur entrée</th>
+                <th>Conducteur sortie</th>
+                <th>Entrée</th>
+                <th>Sortie</th>
+                <th>Durée</th>
+              </tr>
+            </thead>
+            <tbody id="occ-historique-tbody"></tbody>
+          </table>
+          <p class="occ-historique-vide text-muted text-center py-4" id="occ-historique-vide" hidden>Aucun mouvement ne correspond à votre recherche.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>

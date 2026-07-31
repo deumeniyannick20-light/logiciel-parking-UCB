@@ -68,6 +68,14 @@ def resoudre_alerte_vehicule(request, personnel_pk):
             request.session.pop(SESSION_KEY, None)
 
 
+def retirer_alerte_vehicule(request, personnel_pk):
+    alertes = [pk for pk in synchroniser_alertes_vehicule(request) if pk != personnel_pk]
+    if alertes:
+        request.session[SESSION_KEY] = alertes
+    else:
+        request.session.pop(SESSION_KEY, None)
+
+
 def alertes_vehicule_actives(request):
     return synchroniser_alertes_vehicule(request)
 
@@ -83,5 +91,10 @@ def url_autorisee_vehicule(path, alertes):
     creer = reverse("vehicule_creer")
     if path == creer or path.rstrip("/") == creer.rstrip("/"):
         return True
+
+    for pk in alertes:
+        annuler = reverse("personnel_annuler_alerte_vehicule", kwargs={"pk": pk})
+        if path == annuler or path.rstrip("/") == annuler.rstrip("/"):
+            return True
 
     return False

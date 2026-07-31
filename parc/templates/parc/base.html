@@ -11,9 +11,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
   <!-- Font Awesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Style AdminLTE -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+  <link rel="stylesheet" href="{% static 'parc/vendor/fontawesome/css/all.min.css' %}">
+  <!-- Bootstrap + AdminLTE -->
+  <link rel="stylesheet" href="{% static 'parc/vendor/bootstrap/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'parc/vendor/admin-lte/css/adminlte.min.css' %}">
   <link rel="stylesheet" href="{% static 'parc/css/finance-theme.css' %}">
   <link rel="stylesheet" href="{% static 'parc/css/ucb-brand.css' %}">
   <style>
@@ -23,7 +24,7 @@
       --ucb-sidebar-mini: 4.6rem;
     }
 
-    /* Bandeau blanc fixe : logo UCB toujours visible */
+    /* Bandeau sombre fixe : logo UCB centré */
     .ucb-sidebar-top {
       position: fixed;
       top: 0;
@@ -31,16 +32,21 @@
       z-index: 1050;
       width: var(--ucb-sidebar-width);
       height: var(--ucb-topbar-height);
-      background-color: #ffffff !important;
-      border-bottom: 1px solid #dee2e6;
+      background-color: #0d1017 !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
       padding: 7px 10px;
     }
 
     .ucb-sidebar-top .btn-pushmenu {
-      color: #6c757d;
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255, 255, 255, 0.7);
       font-size: 1.25rem;
       padding: 4px 6px;
       line-height: 1;
@@ -50,12 +56,17 @@
     }
 
     .ucb-sidebar-top .btn-pushmenu:hover {
-      color: #212529;
+      color: #ffffff;
     }
 
     .ucb-sidebar-top .ucb-brand {
-      flex: 1;
-      min-width: 0;
+      flex: none;
+      justify-content: center;
+      gap: 0;
+    }
+
+    .ucb-sidebar-top .ucb-brand-text {
+      display: none;
     }
 
     /* Zone sombre : sous le bandeau blanc, repliable */
@@ -90,6 +101,8 @@
     }
 
     body.sidebar-mini.sidebar-collapse .ucb-sidebar-top .btn-pushmenu {
+      position: static;
+      transform: none;
       margin: 0;
       padding: 2px 4px;
       font-size: 1.1rem;
@@ -425,7 +438,7 @@
 <body class="hold-transition sidebar-mini sidebar-no-expand layout-fixed ucb-finance-theme" data-menu-actif="{{ menu_actif|default:'' }}">
 <div class="wrapper">
 
-  <!-- Bandeau blanc fixe (logo UCB toujours visible) -->
+  <!-- Bandeau sombre fixe (logo UCB centré) -->
   <div class="ucb-sidebar-top">
     <a href="#" class="btn-pushmenu" data-widget="pushmenu" role="button" aria-label="Réduire le menu">
       <i class="fas fa-bars"></i>
@@ -533,24 +546,19 @@
             </a>
           </li>
 
+          <li class="ucb-nav-separateur" aria-hidden="true"><span></span></li>
+
           <li class="nav-item">
-            <a href="{% url 'zone_liste' %}" class="nav-link{% if menu_actif == 'zones' %} active{% endif %}">
-              <i class="nav-icon fas fa-map-marked-alt"></i>
-              <p>Gestion des zones</p>
+            <a href="{% url 'occupation_liste' %}" class="nav-link{% if menu_actif == 'occupations' %} active{% endif %}">
+              <i class="nav-icon fas fa-clock"></i>
+              <p>Gestion des occupations</p>
             </a>
           </li>
 
           <li class="nav-item">
-            <a href="{% url 'parking_liste' %}" class="nav-link{% if menu_actif == 'parkings' %} active{% endif %}">
-              <i class="nav-icon fas fa-warehouse"></i>
-              <p>Gestion des parkings</p>
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a href="{% url 'poste_liste' %}" class="nav-link{% if menu_actif == 'postes' %} active{% endif %}">
-              <i class="nav-icon fas fa-id-badge"></i>
-              <p>Gestion des postes</p>
+            <a href="{% url 'vehicule_liste' %}" class="nav-link{% if menu_actif == 'vehicules' %} active{% endif %}">
+              <i class="nav-icon fas fa-car"></i>
+              <p>Gestion des véhicules</p>
             </a>
           </li>
 
@@ -559,7 +567,6 @@
               <i class="nav-icon fas fa-users"></i>
               <div class="nav-link-text">
                 <div>Gestion du personnel</div>
-                
               </div>
             </a>
           </li>
@@ -571,12 +578,30 @@
             </a>
           </li>
 
+          <li class="ucb-nav-separateur" aria-hidden="true"><span></span></li>
+
           <li class="nav-item">
-            <a href="{% url 'vehicule_liste' %}" class="nav-link{% if menu_actif == 'vehicules' %} active{% endif %}">
-              <i class="nav-icon fas fa-car"></i>
-              <p>Gestion des véhicules</p>
+            <a href="{% url 'poste_liste' %}" class="nav-link{% if menu_actif == 'postes' %} active{% endif %}">
+              <i class="nav-icon fas fa-id-badge"></i>
+              <p>Gestion des postes</p>
             </a>
           </li>
+
+          <li class="nav-item">
+            <a href="{% url 'parking_liste' %}" class="nav-link{% if menu_actif == 'parkings' %} active{% endif %}">
+              <i class="nav-icon fas fa-warehouse"></i>
+              <p>Gestion des parkings</p>
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a href="{% url 'zone_liste' %}" class="nav-link{% if menu_actif == 'zones' %} active{% endif %}">
+              <i class="nav-icon fas fa-map-marked-alt"></i>
+              <p>Gestion des zones</p>
+            </a>
+          </li>
+
+          <li class="ucb-nav-separateur" aria-hidden="true"><span></span></li>
 
           {% if est_administrateur %}
           <li class="nav-item">
@@ -586,13 +611,6 @@
             </a>
           </li>
           {% endif %}
-
-          <li class="nav-item">
-            <a href="{% url 'occupation_liste' %}" class="nav-link{% if menu_actif == 'occupations' %} active{% endif %}">
-              <i class="nav-icon fas fa-clock"></i>
-              <p>Gestion des occupations</p>
-            </a>
-          </li>
 
         </ul>
       </nav>
@@ -611,6 +629,8 @@
     </div>
   </div>
 
+  {% block page_overlays %}{% endblock %}
+
   <!-- Pied de page -->
   <footer class="main-footer">
     <strong>Copyright &copy; 2026 - Système de Parking UCB.</strong> Tous droits réservés.
@@ -619,9 +639,9 @@
 </div>
 
 <!-- Scripts JS -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+<script src="{% static 'parc/vendor/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'parc/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'parc/vendor/admin-lte/js/adminlte.min.js' %}"></script>
 <script>
   $(function () {
     $('[data-widget="pushmenu"]').PushMenu({
@@ -786,6 +806,7 @@
       form.querySelectorAll('select, input[type="checkbox"], input[type="radio"]').forEach(function (champ) {
         champ.dispatchEvent(new Event('change', { bubbles: true }));
       });
+      form.dispatchEvent(new CustomEvent('ucb-formulaire-restaure', { bubbles: true }));
     }
 
     function afficherNoticeBrouillon(form) {

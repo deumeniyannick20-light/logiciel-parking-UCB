@@ -78,8 +78,11 @@
     var suggestions = barre.querySelector('.ucb-liste-recherche-suggestions');
     var messageVide = barre.querySelector('.ucb-liste-recherche-vide');
     var lignes = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+    var lignesDonnees = lignes.filter(function (tr) {
+      return !tr.classList.contains('ucb-occ-jour-entete');
+    });
 
-    if (!lignes.length) {
+    if (!lignesDonnees.length) {
       barre.hidden = true;
       return;
     }
@@ -95,8 +98,24 @@
       filtrer('');
     }
 
-    function surligner(ligne) {
+    function mettreAJourEntetesJour() {
       lignes.forEach(function (tr) {
+        if (!tr.classList.contains('ucb-occ-jour-entete')) return;
+        var suivant = tr.nextElementSibling;
+        var visible = false;
+        while (suivant && !suivant.classList.contains('ucb-occ-jour-entete')) {
+          if (!suivant.hidden) {
+            visible = true;
+            break;
+          }
+          suivant = suivant.nextElementSibling;
+        }
+        tr.hidden = !visible;
+      });
+    }
+
+    function surligner(ligne) {
+      lignesDonnees.forEach(function (tr) {
         tr.classList.remove('ucb-liste-recherche-cible');
       });
       ligne.classList.add('ucb-liste-recherche-cible');
@@ -105,7 +124,7 @@
 
     function filtrer(requete) {
       var resultats = [];
-      lignes.forEach(function (ligne) {
+      lignesDonnees.forEach(function (ligne) {
         var texte = texteLigne(ligne);
         var score = scoreCorrespondance(texte, requete);
         if (!normaliser(requete) || score > 0) {
@@ -118,6 +137,8 @@
           ligne.classList.remove('ucb-liste-recherche-cible');
         }
       });
+
+      mettreAJourEntetesJour();
 
       resultats.sort(function (a, b) {
         return b.score - a.score || a.libelle.localeCompare(b.libelle, 'fr');

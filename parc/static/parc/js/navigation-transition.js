@@ -3,14 +3,14 @@
 
   var ORDRE_RUBRIQUES = [
     'home',
-    'zones',
-    'parkings',
-    'postes',
+    'occupations',
+    'vehicules',
     'personnels',
     'places',
-    'vehicules',
+    'postes',
+    'parkings',
+    'zones',
     'utilisateurs',
-    'occupations',
   ];
 
   var CLE_SESSION = 'ucb_menu_section';

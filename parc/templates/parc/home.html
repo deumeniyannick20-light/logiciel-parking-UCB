@@ -4,7 +4,27 @@
 {% block title %}Tableau de bord - Parking UCB{% endblock %}
 
 {% block content %}
-<div class="fin-dashboard">
+<div class="fin-dashboard" id="fin-dashboard-main">
+
+  {# ── Lanceur recherche véhicule (loupe + flèche) ── #}
+  <div class="ucb-recherche-launcher" id="ucb-recherche-launcher" aria-label="Recherche véhicule">
+    <button type="button" class="ucb-recherche-fleche" id="ucb-recherche-ouvrir" aria-label="Ouvrir la recherche véhicule" title="Rechercher un véhicule">
+      <svg class="ucb-fleche-svg" viewBox="0 0 168 52" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g class="ucb-fleche-chevrons">
+          <polygon class="ucb-fleche-seg ucb-fleche-seg--1" points="2,4 16,4 30,26 16,48 2,48" />
+          <polygon class="ucb-fleche-seg ucb-fleche-seg--2" points="22,4 36,4 50,26 36,48 22,48" />
+          <polygon class="ucb-fleche-seg ucb-fleche-seg--3" points="42,4 56,4 70,26 56,48 42,48" />
+          <polygon class="ucb-fleche-seg ucb-fleche-seg--4" points="62,4 76,4 90,26 76,48 62,48" />
+          <polygon class="ucb-fleche-seg ucb-fleche-seg--5" points="82,4 96,4 110,26 96,48 82,48" />
+          <polygon class="ucb-fleche-seg ucb-fleche-seg--6" points="102,4 116,4 130,26 116,48 102,48" />
+          <polygon class="ucb-fleche-seg ucb-fleche-seg--7" points="122,4 136,4 150,26 136,48 122,48" />
+        </g>
+      </svg>
+    </button>
+    <div class="ucb-recherche-loupe" aria-hidden="true">
+      <i class="fas fa-search"></i>
+    </div>
+  </div>
 
   {# ── 4 cartes métriques (style Fintellis) ── #}
   <div class="fin-kpi-row">
@@ -14,16 +34,16 @@
         <div class="fin-metric-spark"><canvas id="spark-vehicules" aria-hidden="true"></canvas></div>
       </div>
       <p class="fin-metric-label">Véhicules présents</p>
-      <div class="fin-metric-value">{{ dashboard.vehicules.presents }}</div>
+      <div class="fin-metric-value"><span data-ucb-count="{{ dashboard.vehicules.presents }}">0</span></div>
       <div class="fin-metric-foot">
         {% if dashboard.vehicules.tendance.direction == 'hausse' %}
-          <span class="fin-trend up"><i class="fas fa-arrow-up"></i> +{{ dashboard.vehicules.tendance.variation }} vs h-1</span>
+          <span class="fin-trend up"><i class="fas fa-arrow-up"></i> +<span data-ucb-count="{{ dashboard.vehicules.tendance.variation }}">0</span> vs h-1</span>
         {% elif dashboard.vehicules.tendance.direction == 'baisse' %}
-          <span class="fin-trend down"><i class="fas fa-arrow-down"></i> {{ dashboard.vehicules.tendance.variation }} vs h-1</span>
+          <span class="fin-trend down"><i class="fas fa-arrow-down"></i> <span data-ucb-count="{{ dashboard.vehicules.tendance.variation }}">0</span> vs h-1</span>
         {% else %}
           <span class="fin-trend flat">Stable sur la dernière heure</span>
         {% endif %}
-        <span class="fin-metric-hint">{{ dashboard.vehicules.enregistres }} enregistrés</span>
+        <span class="fin-metric-hint"><span data-ucb-count="{{ dashboard.vehicules.enregistres }}">0</span> enregistrés</span>
       </div>
     </article>
 
@@ -33,12 +53,12 @@
         <div class="fin-metric-spark"><canvas id="spark-libres" aria-hidden="true"></canvas></div>
       </div>
       <p class="fin-metric-label">Places libres (universel)</p>
-      <div class="fin-metric-value">{{ dashboard.occupation_globale.libres }}</div>
+      <div class="fin-metric-value"><span data-ucb-count="{{ dashboard.occupation_globale.libres }}">0</span></div>
       <div class="fin-metric-foot">
         <span class="fin-trend {% if dashboard.taux_disponibilite >= 20 %}up{% else %}down{% endif %}">
-          {{ dashboard.taux_disponibilite }}&nbsp;% disponible
+          <span data-ucb-count="{{ dashboard.taux_disponibilite }}" data-ucb-decimals="1">0</span>&nbsp;% disponible
         </span>
-        <span class="fin-metric-hint">sur {{ dashboard.occupation_globale.total }} places</span>
+        <span class="fin-metric-hint">sur <span data-ucb-count="{{ dashboard.occupation_globale.total }}">0</span> places</span>
       </div>
     </article>
 
@@ -48,12 +68,12 @@
         <div class="fin-metric-spark"><canvas id="spark-entrees" aria-hidden="true"></canvas></div>
       </div>
       <p class="fin-metric-label">Entrées aujourd'hui</p>
-      <div class="fin-metric-value">{{ dashboard.mouvements_jour.entrees }}</div>
+      <div class="fin-metric-value"><span data-ucb-count="{{ dashboard.mouvements_jour.entrees }}">0</span></div>
       <div class="fin-metric-foot">
         {% if dashboard.flux_24h.tendance_entrees.direction == 'hausse' %}
-          <span class="fin-trend up"><i class="fas fa-arrow-up"></i> +{{ dashboard.flux_24h.tendance_entrees.variation }} dernière heure</span>
+          <span class="fin-trend up"><i class="fas fa-arrow-up"></i> +<span data-ucb-count="{{ dashboard.flux_24h.tendance_entrees.variation }}">0</span> dernière heure</span>
         {% elif dashboard.flux_24h.tendance_entrees.direction == 'baisse' %}
-          <span class="fin-trend down"><i class="fas fa-arrow-down"></i> {{ dashboard.flux_24h.tendance_entrees.variation }} dernière heure</span>
+          <span class="fin-trend down"><i class="fas fa-arrow-down"></i> <span data-ucb-count="{{ dashboard.flux_24h.tendance_entrees.variation }}">0</span> dernière heure</span>
         {% else %}
           <span class="fin-trend flat">Flux régulier</span>
         {% endif %}
@@ -66,14 +86,14 @@
         <div class="fin-metric-spark"><canvas id="spark-sorties" aria-hidden="true"></canvas></div>
       </div>
       <p class="fin-metric-label">Taux d'occupation universel</p>
-      <div class="fin-metric-value">{{ dashboard.occupation_globale.pct }}<span class="fin-metric-unit">%</span></div>
+      <div class="fin-metric-value"><span data-ucb-count="{{ dashboard.occupation_globale.pct }}" data-ucb-decimals="1">0</span><span class="fin-metric-unit">%</span></div>
       <div class="fin-metric-foot">
         {% if dashboard.occupation_globale.alerte %}
           <span class="fin-trend down"><i class="fas fa-exclamation-triangle"></i> Seuil critique ≥ 80&nbsp;%</span>
         {% else %}
           <span class="fin-trend up">Capacité dans la norme</span>
         {% endif %}
-        <span class="fin-metric-hint">{{ dashboard.mouvements_jour.sorties }} sorties aujourd'hui</span>
+        <span class="fin-metric-hint"><span data-ucb-count="{{ dashboard.mouvements_jour.sorties }}">0</span> sorties aujourd'hui</span>
       </div>
     </article>
   </div>
@@ -100,7 +120,7 @@
       <div class="fin-panel-header">
         <div>
           <h3 class="fin-panel-title">Entrées vs Sorties</h3>
-          <p class="fin-panel-desc">Flux horaire sur les 24 dernières heures — comparaison des mouvements enregistrés par le vigile.</p>
+          <p class="fin-panel-desc">Flux horaire sur les 24 dernières heures — courbes lissées, détail minute au clic sur un point.</p>
         </div>
         <span class="fin-badge"><i class="fas fa-circle fin-pulse"></i> Live</span>
       </div>
@@ -109,7 +129,10 @@
       </div>
       <div class="fin-chart-legend">
         <span class="fin-legend-item"><span class="fin-legend-dot fin-legend-dot--blue"></span> Entrées</span>
-        <span class="fin-legend-item"><span class="fin-legend-dot fin-legend-dot--gold"></span> Sorties</span>
+        <span class="fin-legend-item"><span class="fin-legend-dot fin-legend-dot--red"></span> Sorties</span>
+      </div>
+      <div class="fin-flux-detail" id="dash-flux-detail">
+        <p class="fin-flux-detail__vide mb-0">Cliquez sur un point de la courbe pour afficher immatriculation, marque et conducteur.</p>
       </div>
     </div>
 
@@ -118,7 +141,7 @@
       <p class="fin-panel-desc">Disponibilité instantanée du parc universel (employés &amp; cadres).</p>
       <div class="fin-occupation-hero">
         <div class="fin-occupation-pct{% if dashboard.occupation_globale.alerte %} fin-occupation-pct--alert{% endif %}">
-          {{ dashboard.occupation_globale.pct }}<span>%</span>
+          <span data-ucb-count="{{ dashboard.occupation_globale.pct }}" data-ucb-decimals="1">0</span><span>%</span>
         </div>
         <div class="fin-occupation-donut">
           <canvas id="dash-occupation-donut" aria-hidden="true"></canvas>
@@ -127,19 +150,19 @@
       <ul class="fin-metrics-list">
         <li>
           <span class="fin-metrics-label">Places occupées</span>
-          <strong>{{ dashboard.occupation_globale.occupes }}</strong>
+          <strong data-ucb-count="{{ dashboard.occupation_globale.occupes }}">0</strong>
         </li>
         <li>
           <span class="fin-metrics-label">Places libres</span>
-          <strong class="fin-text-success">{{ dashboard.occupation_globale.libres }}</strong>
+          <strong class="fin-text-success" data-ucb-count="{{ dashboard.occupation_globale.libres }}">0</strong>
         </li>
         <li>
           <span class="fin-metrics-label">Capacité totale</span>
-          <strong>{{ dashboard.occupation_globale.total }}</strong>
+          <strong data-ucb-count="{{ dashboard.occupation_globale.total }}">0</strong>
         </li>
         <li>
           <span class="fin-metrics-label">Parkings universels actifs</span>
-          <strong>{{ dashboard.parkings_universels|length }}</strong>
+          <strong data-ucb-count="{{ dashboard.parkings_universels|length }}">0</strong>
         </li>
       </ul>
     </div>
@@ -161,15 +184,15 @@
       </div>
       <h4 class="fin-parking-name">{{ p.nom }}</h4>
       <div class="fin-parking-stats">
-        <span class="fin-parking-big">{{ p.libres }}</span>
-        <span class="fin-parking-sub">libres · {{ p.occupes }} occupées</span>
+        <span class="fin-parking-big"><span data-ucb-count="{{ p.libres }}">0</span></span>
+        <span class="fin-parking-sub">libres · <span data-ucb-count="{{ p.occupes }}">0</span> occupées</span>
       </div>
       <div class="fin-parking-bar">
         <div class="fin-parking-bar-fill{% if p.alerte %} fin-parking-bar-fill--alert{% endif %}"
-             style="width: {{ p.pct_occupe }}%"></div>
+             data-ucb-barre="{{ p.pct_occupe }}" style="width: 0%"></div>
       </div>
       <p class="fin-parking-desc">
-        {{ p.pct_occupe }}&nbsp;% occupé — {{ p.total }} places actives.
+        <span data-ucb-count="{{ p.pct_occupe }}" data-ucb-decimals="1">0</span>&nbsp;% occupé — <span data-ucb-count="{{ p.total }}">0</span> places actives.
         {% if p.alerte %}<strong class="fin-text-danger"> Alerte capacité.</strong>{% endif %}
       </p>
       <div class="fin-parking-spark"><canvas id="spark-parking-{{ p.id }}" aria-hidden="true"></canvas></div>
@@ -188,11 +211,11 @@
       </div>
       <h4 class="fin-parking-name">Présence véhiculée</h4>
       <div class="fin-parking-stats">
-        <span class="fin-parking-big">{{ dashboard.vehicules.presents }}</span>
+        <span class="fin-parking-big"><span data-ucb-count="{{ dashboard.vehicules.presents }}">0</span></span>
         <span class="fin-parking-sub">sur site maintenant</span>
       </div>
       <p class="fin-parking-desc">
-        Parc enregistré : {{ dashboard.vehicules.enregistres }} véhicules de service.
+        Parc enregistré : <span data-ucb-count="{{ dashboard.vehicules.enregistres }}">0</span> véhicules de service.
         Cliquez pour l'évolution mensuelle.
       </p>
       <div class="fin-parking-spark"><canvas id="spark-vehicules-detail" aria-hidden="true"></canvas></div>
@@ -200,8 +223,11 @@
   </div>
 </div>
 
-{{ dashboard_json|json_script:"dashboard-data" }}
+{{ dashboard|json_script:"dashboard-data" }}
+{% endblock %}
 
+{% block page_overlays %}
+{% include "parc/includes/occupation_recherche_scene.html" %}
 <div class="dash-expand-overlay" id="dash-expand-overlay" role="dialog" aria-modal="true" aria-labelledby="dash-expand-title">
   <div class="dash-expand-panel fin-expand-panel">
     <div class="dash-expand-header">
@@ -225,6 +251,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="{% static 'parc/js/dashboard.js' %}"></script>
+<script src="{% static 'parc/vendor/chartjs/chart.umd.min.js' %}"></script>
+<script src="{% static 'parc/js/dashboard.js' %}?v=20260731h"></script>
+<script src="{% static 'parc/js/occupation-recherche.js' %}?v=20260731i"></script>
 {% endblock %}

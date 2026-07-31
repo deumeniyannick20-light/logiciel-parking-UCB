@@ -1,4 +1,5 @@
 from django import forms
+import json
 from django.contrib.auth.forms import (
     AuthenticationForm,
     PasswordChangeForm,
@@ -14,6 +15,19 @@ from .models import (
     Poste, Parking, PlaceParking, Utilisateur, Occupation
 )
 from .text_format import formater_champ, CHAMPS_NUMERIQUES, formater_nom_poste
+from .vehicule_conducteurs import conducteurs_autorises_pour
+from .occupation_places import (
+    cartographie_places_conducteurs,
+    place_autorisee_pour_conducteur,
+    queryset_places_pour_conducteur,
+)
+from .poste_chauffeur import personnel_chauffeurs_disponibles, personnel_est_chauffeur
+from .personnel_postes import (
+    message_poste_indisponible,
+    personnel_peut_occuper_poste,
+    queryset_postes_pour_personnel,
+)
+from .personnel_email import proposer_email_ucb
 
 
 def appliquer_asterisques_obligatoires(form, champs_supplementaires=()):
@@ -81,14 +95,14 @@ class VehiculeForm(FormulaireMetier):
 
     class Meta:
         model = Vehicule
-        fields = ["immatriculation", "marque", "modele", "couleur", "personnel", "chauffeur", "actif"]
+        fields = ["immatriculation", "marque", "modele", "couleur", "personnel", "chauffeurs", "actif"]
         labels = {
             "immatriculation": "Immatriculation",
             "marque": "Marque",
             "modele": "Modèle",
             "couleur": "Couleur",
-            "personnel": "Titulaire (Personnel)",
-            "chauffeur": "Chauffeur (optionnel)",
+            "personnel": "Titulaire (optionnel)",
+            "chauffeurs": "Chauffeurs",
             "actif": "Actif",
         }
         widgets = {
@@ -96,19 +110,77 @@ class VehiculeForm(FormulaireMetier):
             "marque": forms.TextInput(attrs={"class": "form-control"}),
             "modele": forms.TextInput(attrs={"class": "form-control"}),
             "couleur": forms.TextInput(attrs={"class": "form-control"}),
-            "personnel": forms.Select(attrs={"class": "form-control"}),
-            "chauffeur": forms.Select(attrs={"class": "form-control"}),
+            "personnel": forms.Select(attrs={"class": "form-control", "id": "id_personnel"}),
+            "chauffeurs": forms.CheckboxSelectMultiple(
+                attrs={"class": "ucb-chauffeurs-checkboxes", "id": "id_chauffeurs"},
+            ),
         }
 
     def configurer_champs(self):
+        self.fields["personnel"].required = False
+        self.fields["personnel"].empty_label = "— Aucun titulaire —"
+        self.fields["couleur"].required = True
         if self.personnel_verrouille:
             self.fields["personnel"].initial = self.personnel_verrouille
             self.fields["personnel"].disabled = True
+        self._maj_chauffeurs()
+
+    def clean_couleur(self):
+        couleur = (self.cleaned_data.get("couleur") or "").strip()
+        if not couleur:
+            raise ValidationError("La couleur est obligatoire.")
+        return couleur
+
+    def _titulaire_courant(self):
+        if self.personnel_verrouille:
+            return Personnel.objects.filter(pk=self.personnel_verrouille).first()
+        if self.is_bound:
+            personnel_id = self.data.get("personnel")
+            if personnel_id:
+                return Personnel.objects.filter(pk=personnel_id).first()
+        if self.instance and self.instance.pk and self.instance.personnel_id:
+            return self.instance.personnel
+        return None
+
+    def _maj_chauffeurs(self):
+        titulaire = self._titulaire_courant()
+        exclure_pk = titulaire.pk if titulaire else None
+        queryset = personnel_chauffeurs_disponibles(exclure_pk=exclure_pk)
+        if titulaire:
+            self.fields["chauffeurs"].required = False
+            self.fields["chauffeurs"].label = "Chauffeurs (optionnel)"
+        else:
+            self.fields["chauffeurs"].required = True
+            self.fields["chauffeurs"].label = "Chauffeurs"
+        self.fields["chauffeurs"].queryset = queryset
 
     def clean(self):
         cleaned_data = super().clean()
         if self.personnel_verrouille:
             cleaned_data["personnel"] = Personnel.objects.get(pk=self.personnel_verrouille)
+
+        titulaire = cleaned_data.get("personnel")
+        chauffeurs = cleaned_data.get("chauffeurs")
+        chauffeur_list = list(chauffeurs) if chauffeurs is not None else []
+
+        if titulaire:
+            chauffeur_list = [
+                chauffeur for chauffeur in chauffeur_list
+                if chauffeur.pk != titulaire.pk
+            ]
+            cleaned_data["chauffeurs"] = chauffeur_list
+        elif not chauffeur_list:
+            raise ValidationError(
+                "Indiquez un titulaire ou au moins un chauffeur pour ce véhicule."
+            )
+
+        for chauffeur in chauffeur_list:
+            if not personnel_est_chauffeur(chauffeur):
+                raise ValidationError(
+                    "Seuls les membres du personnel au poste Chauffeur peuvent être "
+                    "affectés comme chauffeurs du véhicule."
+                )
+
         return cleaned_data
 
 
@@ -124,17 +196,44 @@ class PersonnelForm(FormulaireMetier):
             "actif": "Actif",
         }
         widgets = {
-            "nom": forms.TextInput(attrs={"class": "form-control", "style": "text-transform: uppercase;"}),
-            "prenom": forms.TextInput(attrs={"class": "form-control"}),
-            "poste_obj": forms.Select(attrs={"class": "form-control"}),
-            "email": forms.EmailInput(attrs={"class": "form-control", "autocomplete": "email"}),
+            "nom": forms.TextInput(attrs={"class": "form-control", "style": "text-transform: uppercase;", "id": "id_nom"}),
+            "prenom": forms.TextInput(attrs={"class": "form-control", "id": "id_prenom"}),
+            "poste_obj": forms.Select(attrs={"class": "form-control", "id": "id_poste_obj"}),
+            "email": forms.EmailInput(attrs={
+                "class": "form-control",
+                "id": "id_email",
+                "autocomplete": "email",
+                "style": "text-transform: lowercase;",
+            }),
         }
 
     def configurer_champs(self):
         self.fields["email"].required = True
+        self.fields["poste_obj"].queryset = queryset_postes_pour_personnel(
+            self.instance if self.instance.pk else None
+        )
+        self.fields["poste_obj"].required = True
+        self.fields["poste_obj"].empty_label = "— Sélectionner un poste —"
+        self.fields["poste_obj"].help_text = ""
+        self.fields["email"].help_text = ""
+
+    def clean_poste_obj(self):
+        poste = self.cleaned_data.get("poste_obj")
+        if not poste:
+            raise ValidationError("Le poste occupé est obligatoire.")
+        personnel = self.instance if self.instance.pk else None
+        if not personnel_peut_occuper_poste(poste, personnel=personnel):
+            raise ValidationError(message_poste_indisponible())
+        return poste
 
     def clean_email(self):
         email = (self.cleaned_data.get("email") or "").strip().lower()
+        if not email and not self.instance.pk:
+            nom = self.cleaned_data.get("nom")
+            prenom = self.cleaned_data.get("prenom")
+            poste = self.cleaned_data.get("poste_obj")
+            if nom and prenom and poste:
+                email = proposer_email_ucb(nom, prenom)
         if not email:
             raise ValidationError("L'email est obligatoire.")
         return email
@@ -165,10 +264,11 @@ class PosteForm(FormulaireMetier):
 
     class Meta:
         model = Poste
-        fields = ["nom", "description", "actif"]
+        fields = ["nom", "description", "est_chauffeur", "actif"]
         labels = {
             "nom": "Poste",
             "description": "Description",
+            "est_chauffeur": "Poste de chauffeur",
             "actif": "Actif",
         }
         widgets = {
@@ -177,6 +277,9 @@ class PosteForm(FormulaireMetier):
         }
 
     def configurer_champs(self):
+        self.fields["est_chauffeur"].help_text = (
+            "À cocher uniquement pour le poste Chauffeur (personnel affectable aux véhicules)."
+        )
         places = PlaceParking.objects.filter(
             actif=True,
             parking__type_parking=Parking.TYPE_RESERVE,
@@ -195,7 +298,7 @@ class PosteForm(FormulaireMetier):
         self.fields["place_parking_affectee"].label_from_instance = (
             lambda obj: f"{obj.parking.nom} — Place N°{obj.numero}"
         )
-        self.order_fields(["nom", "description", "place_parking_affectee", "actif"])
+        self.order_fields(["nom", "description", "est_chauffeur", "place_parking_affectee", "actif"])
 
     def clean(self):
         cleaned_data = super().clean()
@@ -264,6 +367,26 @@ class ParkingForm(FormulaireMetier):
             raise ValidationError("Un parking doit avoir au moins une place.")
         return capacite
 
+    def clean(self):
+        cleaned_data = super().clean()
+        capacite = cleaned_data.get("capacite_total")
+        type_parking = cleaned_data.get("type_parking")
+        if (
+            self.instance.pk
+            and capacite is not None
+            and type_parking == Parking.TYPE_UNIVERSEL
+        ):
+            nb_places = PlaceParking.objects.filter(parking_id=self.instance.pk).count()
+            if capacite < nb_places:
+                raise ValidationError({
+                    "capacite_total": (
+                        f"La capacité ne peut pas être inférieure au nombre de places "
+                        f"déjà enregistrées ({nb_places}). Supprimez d'abord les places "
+                        f"en trop dans « Gérer les places »."
+                    ),
+                })
+        return cleaned_data
+
 
 class PlaceParkingForm(FormulaireMetier):
     class Meta:
@@ -297,6 +420,11 @@ class PlaceParkingForm(FormulaireMetier):
         )
         self.fields["poste_affecte"].required = False
         self.fields["poste_affecte"].empty_label = "— Aucun —"
+        self.fields["parking"].queryset = Parking.objects.filter(actif=True).order_by("nom")
+        self.types_parking = json.dumps({
+            str(pk): type_parking
+            for pk, type_parking in Parking.objects.values_list("pk", "type_parking")
+        })
 
     def clean(self):
         cleaned_data = super().clean()
@@ -305,6 +433,13 @@ class PlaceParkingForm(FormulaireMetier):
         if not parking:
             return cleaned_data
         if parking.type_parking == Parking.TYPE_UNIVERSEL:
+            if poste:
+                raise ValidationError({
+                    "poste_affecte": (
+                        "Un parking universel ne peut pas avoir de poste affecté. "
+                        "Sélectionnez « — Aucun — » ou choisissez un parking réservé."
+                    ),
+                })
             cleaned_data["poste_affecte"] = None
             return cleaned_data
         if parking.type_parking == Parking.TYPE_RESERVE and not poste:
@@ -471,24 +606,215 @@ class UtilisateurForm(FormulaireMetier):
 class OccupationEntreeForm(FormulaireMetier):
     class Meta:
         model = Occupation
-        fields = ["vehicule", "place_parking", "observation"]
+        fields = ["vehicule", "conducteur_entree", "place_parking", "observation"]
         labels = {
             "vehicule": "Véhicule (immatriculation)",
+            "conducteur_entree": "Conducteur",
             "place_parking": "Place de parking",
             "observation": "Observation",
         }
         widgets = {
-            "vehicule": forms.Select(attrs={"class": "form-control"}),
-            "place_parking": forms.Select(attrs={"class": "form-control"}),
+            "vehicule": forms.Select(attrs={"class": "form-control", "id": "id_vehicule"}),
+            "place_parking": forms.Select(attrs={"class": "form-control", "id": "id_place_parking"}),
+            "conducteur_entree": forms.Select(attrs={"class": "form-control", "id": "id_conducteur_entree"}),
             "observation": forms.TextInput(attrs={"class": "form-control"}),
         }
 
     def configurer_champs(self):
-        self.fields["vehicule"].queryset = Vehicule.objects.filter(actif=True)
-        self.fields["place_parking"].queryset = PlaceParking.objects.filter(
-            statut=PlaceParking.STATUT_LIBRE,
+        occupations_actives = Occupation.objects.filter(date_sortie__isnull=True)
+        if self.instance and self.instance.pk:
+            occupations_actives = occupations_actives.exclude(pk=self.instance.pk)
+
+        vehicules_gares = occupations_actives.values_list("vehicule_id", flat=True)
+        self.fields["vehicule"].queryset = Vehicule.objects.filter(
             actif=True,
+        ).exclude(pk__in=vehicules_gares).select_related("personnel").prefetch_related("chauffeurs")
+        self.fields["conducteur_entree"].required = True
+        self.fields["conducteur_entree"].empty_label = "— Sélectionnez d'abord un véhicule —"
+        self.fields["place_parking"].queryset = PlaceParking.objects.none()
+        self.fields["place_parking"].empty_label = "— Sélectionnez d'abord le conducteur —"
+        self._maj_conducteurs()
+        self._maj_places()
+
+    def _place_courante_id(self):
+        if self.instance and self.instance.pk and self.instance.place_parking_id:
+            return self.instance.place_parking_id
+        return None
+
+    def _vehicule_courant(self):
+        vehicule = None
+        if self.is_bound:
+            vehicule_id = self.data.get("vehicule")
+            if vehicule_id:
+                vehicule = Vehicule.objects.filter(pk=vehicule_id).select_related(
+                    "personnel"
+                ).prefetch_related("chauffeurs").first()
+        elif self.instance and self.instance.vehicule_id:
+            vehicule = self.instance.vehicule
+        return vehicule
+
+    def _conducteur_courant(self):
+        conducteur = None
+        if self.is_bound:
+            conducteur_id = self.data.get("conducteur_entree")
+            if conducteur_id:
+                conducteur = Personnel.objects.select_related("poste_obj").filter(
+                    pk=conducteur_id
+                ).first()
+        elif self.instance and self.instance.conducteur_entree_id:
+            conducteur = self.instance.conducteur_entree
+        return conducteur
+
+    def _maj_conducteurs(self):
+        vehicule = self._vehicule_courant()
+        self.fields["conducteur_entree"].queryset = conducteurs_autorises_pour(vehicule)
+        if vehicule:
+            self.fields["conducteur_entree"].empty_label = "— Sélectionner le conducteur —"
+        else:
+            self.fields["conducteur_entree"].empty_label = "— Sélectionnez d'abord un véhicule —"
+
+    def _maj_places(self):
+        conducteur = self._conducteur_courant()
+        qs, place_auto = queryset_places_pour_conducteur(
+            conducteur,
+            place_courante_id=self._place_courante_id(),
         )
+        self.fields["place_parking"].queryset = qs
+
+        if not conducteur:
+            self.fields["place_parking"].empty_label = "— Sélectionnez d'abord le conducteur —"
+            return
+
+        if place_auto:
+            self.fields["place_parking"].initial = place_auto.pk
+            self.fields["place_parking"].empty_label = None
+            return
+
+        if qs.exists():
+            self.fields["place_parking"].empty_label = "— Sélectionner une place —"
+        else:
+            self.fields["place_parking"].empty_label = "— Aucune place universelle libre —"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        vehicule = cleaned_data.get("vehicule")
+        conducteur = cleaned_data.get("conducteur_entree")
+        place = cleaned_data.get("place_parking")
+
+        if vehicule and conducteur:
+            autorises = conducteurs_autorises_pour(vehicule)
+            if not autorises.filter(pk=conducteur.pk).exists():
+                self.add_error(
+                    "conducteur_entree",
+                    ValidationError(
+                        "Le conducteur doit être le titulaire ou un chauffeur du véhicule."
+                    ),
+                )
+
+        if conducteur and place:
+            if not place_autorisee_pour_conducteur(
+                conducteur,
+                place,
+                place_courante_id=self._place_courante_id(),
+            ):
+                self.add_error(
+                    "place_parking",
+                    ValidationError(
+                        "Cette place n'est pas autorisée pour le conducteur sélectionné."
+                    ),
+                )
+            elif (
+                place.parking.type_parking == Parking.TYPE_RESERVE
+                and place.statut == PlaceParking.STATUT_OCCUPEE
+                and place.pk != self._place_courante_id()
+            ):
+                self.add_error(
+                    "place_parking",
+                    ValidationError("La place réservée de ce conducteur est déjà occupée."),
+                )
+
+        return cleaned_data
+
+
+class OccupationSortieForm(forms.Form):
+    conducteur_sortie = forms.ModelChoiceField(
+        queryset=Personnel.objects.none(),
+        label="Conducteur",
+        widget=forms.Select(attrs={"class": "form-control"}),
+        empty_label="— Sélectionner le conducteur —",
+    )
+
+    def __init__(self, occupation, *args, **kwargs):
+        self.occupation = occupation
+        super().__init__(*args, **kwargs)
+        self.fields["conducteur_sortie"].queryset = conducteurs_autorises_pour(
+            occupation.vehicule
+        )
+        self.fields["conducteur_sortie"].required = True
+
+    def clean_conducteur_sortie(self):
+        conducteur = self.cleaned_data.get("conducteur_sortie")
+        autorises = conducteurs_autorises_pour(self.occupation.vehicule)
+        if conducteur and not autorises.filter(pk=conducteur.pk).exists():
+            raise ValidationError(
+                "Le conducteur doit être le titulaire ou un chauffeur du véhicule."
+            )
+        return conducteur
+
+
+class OccupationModifierForm(OccupationEntreeForm):
+    class Meta(OccupationEntreeForm.Meta):
+        fields = [
+            "vehicule",
+            "place_parking",
+            "conducteur_entree",
+            "conducteur_sortie",
+            "observation",
+        ]
+        labels = {
+            **OccupationEntreeForm.Meta.labels,
+            "conducteur_sortie": "Conducteur à la sortie",
+        }
+        widgets = {
+            **OccupationEntreeForm.Meta.widgets,
+            "conducteur_sortie": forms.Select(attrs={"class": "form-control", "id": "id_conducteur_sortie"}),
+        }
+
+    def configurer_champs(self):
+        super().configurer_champs()
+        vehicule = self._vehicule_courant() or (
+            self.instance.vehicule if self.instance and self.instance.pk else None
+        )
+        self.fields["conducteur_sortie"].queryset = conducteurs_autorises_pour(vehicule)
+        self.fields["conducteur_sortie"].required = bool(
+            self.instance and self.instance.date_sortie
+        )
+        if not self.instance or not self.instance.date_sortie:
+            self.fields["conducteur_sortie"].widget = forms.HiddenInput()
+            self.fields["conducteur_sortie"].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        vehicule = cleaned_data.get("vehicule")
+        conducteur_sortie = cleaned_data.get("conducteur_sortie")
+        if self.instance and self.instance.date_sortie:
+            if not conducteur_sortie:
+                self.add_error(
+                    "conducteur_sortie",
+                    ValidationError("Indiquez le conducteur à la sortie."),
+                )
+            elif vehicule:
+                autorises = conducteurs_autorises_pour(vehicule)
+                if not autorises.filter(pk=conducteur_sortie.pk).exists():
+                    self.add_error(
+                        "conducteur_sortie",
+                        ValidationError(
+                            "Le conducteur doit être le titulaire ou un chauffeur du véhicule."
+                        ),
+                    )
+        else:
+            cleaned_data["conducteur_sortie"] = None
+        return cleaned_data
 
 
 class ConnexionEmailForm(AuthenticationForm):
